@@ -8,8 +8,12 @@ use crate::Index;
 use serde::{Deserialize, Serialize};
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 use tokio::fs as tokio_fs;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::sync::Mutex;
+use chrono::{DateTime, Utc};
 
 /// 索引变更类型
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -39,6 +43,14 @@ pub struct WALConfig {
     pub compression: bool,
     /// 压缩级别 (1-22)
     pub compression_level: i32,
+    /// 最大 WAL 文件数量（用于轮转）
+    pub max_wal_files: usize,
+    /// 快照间隔（变更次数）
+    pub snapshot_interval: usize,
+    /// 是否启用自动清理
+    pub auto_cleanup: bool,
+    /// 清理间隔（秒）
+    pub cleanup_interval: u64,
 }
 
 impl Default for WALConfig {
@@ -48,6 +60,10 @@ impl Default for WALConfig {
             max_wal_size: 100 * 1024 * 1024, // 100MB
             compression: true,
             compression_level: 3,
+            max_wal_files: 10,
+            snapshot_interval: 1000,
+            auto_cleanup: true,
+            cleanup_interval: 3600, // 1小时
         }
     }
 }
@@ -58,6 +74,8 @@ pub struct WALManager {
     wal_path: PathBuf,
     snapshot_path: PathBuf,
     wal_size: usize,
+    change_count: Arc<AtomicUsize>,
+    last_cleanup_time: Arc<Mutex<Option<DateTime<Utc>>>>,
 }
 
 impl WALManager {
@@ -75,12 +93,79 @@ impl WALManager {
             0
         };
 
-        Ok(Self {
+        // 启动自动清理任务
+        let manager = Self {
             config,
             wal_path,
             snapshot_path,
             wal_size,
-        })
+            change_count: Arc::new(AtomicUsize::new(0)),
+            last_cleanup_time: Arc::new(Mutex::new(None)),
+        };
+
+        if manager.config.auto_cleanup {
+            manager.start_cleanup_task();
+        }
+
+        Ok(manager)
+    }
+
+    /// 启动自动清理任务
+    fn start_cleanup_task(&self) {
+        let config = self.config.clone();
+        let last_cleanup_time = self.last_cleanup_time.clone();
+        let base_path = self.config.base_path.clone();
+        
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(config.cleanup_interval));
+            
+            loop {
+                interval.tick().await;
+                let mut last_cleanup = last_cleanup_time.lock().await;
+                let now = Utc::now();
+                if let Some(last) = *last_cleanup {
+                    let duration = now.signed_duration_since(last);
+                    if duration.num_seconds() >= config.cleanup_interval as i64 {
+                        *last_cleanup = Some(now);
+                        
+                        // 执行清理逻辑
+                        if let Ok(mut entries) = tokio_fs::read_dir(&base_path).await {
+                            let mut wal_files = Vec::new();
+                            
+                            while let Some(entry) = entries.next_entry().await.ok().flatten() {
+                                let path = entry.path();
+                                if let Some(file_name) = path.file_name() {
+                                    let file_name_str = file_name.to_string_lossy();
+                                    if file_name_str.starts_with("wal_") && file_name_str.ends_with(".log") {
+                                        if let Ok(metadata) = entry.metadata().await {
+                                            wal_files.push((path, metadata.modified().ok()));
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            // 按修改时间排序
+                            wal_files.sort_by(|a, b| {
+                                match (&a.1, &b.1) {
+                                    (Some(time_a), Some(time_b)) => time_a.cmp(time_b),
+                                    (Some(_), None) => std::cmp::Ordering::Less,
+                                    (None, Some(_)) => std::cmp::Ordering::Greater,
+                                    (None, None) => std::cmp::Ordering::Equal,
+                                }
+                            });
+                            
+                            // 删除超过最大数量的文件
+                            let files_to_remove = wal_files.len().saturating_sub(config.max_wal_files);
+                            for (path, _) in wal_files.iter().take(files_to_remove) {
+                                let _ = tokio_fs::remove_file(path).await;
+                            }
+                        }
+                    }
+                } else {
+                    *last_cleanup = Some(now);
+                }
+            }
+        });
     }
 
     /// 记录变更到 WAL
@@ -99,9 +184,15 @@ impl WALManager {
         file.sync_data().await?;
 
         self.wal_size += line.len();
+        self.change_count.fetch_add(1, Ordering::Relaxed);
 
         // WAL 超过阈值时触发快照
         if self.wal_size > self.config.max_wal_size {
+            self.trigger_snapshot().await?;
+        }
+
+        // 达到快照间隔时触发快照
+        if self.change_count.load(Ordering::Relaxed) % self.config.snapshot_interval == 0 {
             self.trigger_snapshot().await?;
         }
 
@@ -143,8 +234,82 @@ impl WALManager {
 
     /// 触发快照（异步任务）
     async fn trigger_snapshot(&mut self) -> Result<()> {
-        // 注意：实际实现中应该使用后台任务
-        // 这里简化处理，直接返回
+        // 1. 轮转 WAL 文件
+        self.rotate_wal_files().await?;
+
+        // 2. 创建快照
+        // 注意：快照创建需要传入 Index 实例，这里简化处理
+        // 实际使用时应该在外部调用 create_snapshot 方法
+        
+        Ok(())
+    }
+
+    /// 轮转 WAL 文件
+    async fn rotate_wal_files(&mut self) -> Result<()> {
+        if !self.wal_path.exists() {
+            return Ok(());
+        }
+
+        // 生成新的 WAL 文件名（带时间戳）
+        let timestamp = Utc::now().format("%Y%m%d_%H%M%S").to_string();
+        let rotated_path = self.config.base_path.join(format!("wal_{}.log", timestamp));
+
+        // 重命名当前 WAL 文件
+        tokio_fs::rename(&self.wal_path, &rotated_path).await?;
+
+        // 清理旧的 WAL 文件
+        self.cleanup_old_wal_files().await?;
+
+        // 重置 WAL 大小
+        self.wal_size = 0;
+
+        Ok(())
+    }
+
+    /// 清理旧的 WAL 文件
+    async fn cleanup_old_wal_files(&self) -> Result<()> {
+        let mut entries = tokio_fs::read_dir(&self.config.base_path).await?;
+        let mut wal_files = Vec::new();
+
+        while let Some(entry) = entries.next_entry().await? {
+            let path = entry.path();
+            if let Some(file_name) = path.file_name() {
+                let file_name_str = file_name.to_string_lossy();
+                if file_name_str.starts_with("wal_") && file_name_str.ends_with(".log") {
+                    if let Ok(metadata) = entry.metadata().await {
+                        wal_files.push((path, metadata.modified().ok()));
+                    }
+                }
+            }
+        }
+
+        // 按修改时间排序
+        wal_files.sort_by(|a, b| {
+            match (&a.1, &b.1) {
+                (Some(time_a), Some(time_b)) => time_a.cmp(time_b),
+                (Some(_), None) => std::cmp::Ordering::Less,
+                (None, Some(_)) => std::cmp::Ordering::Greater,
+                (None, None) => std::cmp::Ordering::Equal,
+            }
+        });
+
+        // 删除超过最大数量的文件
+        let files_to_remove = wal_files.len().saturating_sub(self.config.max_wal_files);
+        for (path, _) in wal_files.iter().take(files_to_remove) {
+            let _ = tokio_fs::remove_file(path).await;
+        }
+
+        Ok(())
+    }
+
+    /// 手动触发清理
+    pub async fn manual_cleanup(&self) -> Result<()> {
+        self.cleanup_old_wal_files().await?;
+        
+        // 更新最后清理时间
+        let mut last_cleanup = self.last_cleanup_time.lock().await;
+        *last_cleanup = Some(Utc::now());
+        
         Ok(())
     }
 

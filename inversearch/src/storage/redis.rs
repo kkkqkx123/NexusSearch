@@ -350,7 +350,9 @@ impl StorageInterface for RedisStorage {
             is_connected: true,
         })
     }
+}
 
+impl RedisStorage {
     /// 批量删除文档（优化版本）
     pub async fn remove_batch(&mut self, ids: &[DocId]) -> Result<()> {
         if ids.is_empty() {
@@ -491,126 +493,31 @@ impl StorageMetrics {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Index;
-    use std::collections::HashMap;
-    use std::sync::{Arc, Mutex};
 
-    /// Mock Redis 存储，用于单元测试
-    pub struct MockRedisStorage {
-        data: Arc<Mutex<HashMap<String, Vec<u64>>>>,
-        key_prefix: String,
-    }
-
-    impl MockRedisStorage {
-        pub fn new() -> Self {
-            Self {
-                data: Arc::new(Mutex::new(HashMap::new())),
-                key_prefix: "inversearch".to_string(),
-            }
-        }
-
-        fn make_key(&self, term: &str) -> String {
-            format!("{}:index:{}", self.key_prefix, term)
-        }
-
-        pub async fn commit(&mut self, index: &Index, _replace: bool, _append: bool) -> Result<()> {
-            let mut data = self.data.lock().unwrap();
-
-            for (_term_hash, doc_ids) in &index.map.index {
-                for (term_str, ids) in doc_ids {
-                    let key = self.make_key(term_str);
-                    data.insert(key, ids.clone());
-                }
-            }
-
-            Ok(())
-        }
-
-        pub async fn get(
-            &self,
-            term: &str,
-            _context: Option<&str>,
-            limit: usize,
-            offset: usize,
-            _resolve: bool,
-            _highlight: bool,
-        ) -> Result<Vec<u64>> {
-            let data = self.data.lock().unwrap();
-            let key = self.make_key(term);
-
-            if let Some(ids) = data.get(&key) {
-                let start = offset.min(ids.len());
-                let end = (offset + limit).min(ids.len());
-                Ok(ids[start..end].to_vec())
-            } else {
-                Ok(vec![])
-            }
-        }
-
-        pub async fn has(&self, doc_id: u64) -> Result<bool> {
-            let data = self.data.lock().unwrap();
-            Ok(data.values().any(|ids| ids.contains(&doc_id)))
-        }
-
-        pub async fn destroy(&mut self) -> Result<()> {
-            let mut data = self.data.lock().unwrap();
-            data.clear();
-            Ok(())
-        }
+    #[tokio::test]
+    async fn test_redis_storage_connection() {
+        let config = RedisStorageConfig::default();
+        let storage = RedisStorage::new(config).await;
+        
+        // 测试连接是否成功
+        assert!(storage.is_ok());
     }
 
     #[tokio::test]
-    async fn test_mock_redis_storage() {
-        let mut storage = MockRedisStorage::new();
-
-        let mut index = Index::default();
-        index.add(1, "hello world", false).unwrap();
-        index.add(2, "rust programming", false).unwrap();
-
-        storage.commit(&index, false, false).await.unwrap();
-
-        let results = storage.get("hello", None, 10, 0, true, false).await.unwrap();
-        assert_eq!(results.len(), 1);
-        assert!(results.contains(&1));
-
-        let has_result = storage.has(1).await.unwrap();
-        assert!(has_result);
-        assert!(!storage.has(3).await.unwrap());
-
-        storage.destroy().await.unwrap();
-        assert!(!storage.has(1).await.unwrap());
+    async fn test_redis_storage_health_check() {
+        let config = RedisStorageConfig::default();
+        let storage = RedisStorage::new(config).await.unwrap();
+        
+        let is_healthy = storage.health_check().await.unwrap();
+        assert!(is_healthy);
     }
 
     #[tokio::test]
-    async fn test_mock_redis_pagination() {
-        let mut storage = MockRedisStorage::new();
-
-        let mut index = Index::default();
-        // 添加多个文档
-        for i in 1..=10 {
-            index.add(i, "test document", false).unwrap();
-        }
-
-        storage.commit(&index, false, false).await.unwrap();
-
-        // 测试分页
-        let results = storage.get("test", None, 5, 0, true, false).await.unwrap();
-        assert_eq!(results.len(), 5);
-
-        let results = storage.get("test", None, 5, 5, true, false).await.unwrap();
-        assert_eq!(results.len(), 5);
-
-        let results = storage.get("test", None, 5, 10, true, false).await.unwrap();
-        assert_eq!(results.len(), 0);
-    }
-
-    #[tokio::test]
-    async fn test_mock_redis_empty() {
-        let storage = MockRedisStorage::new();
-
-        let results = storage.get("nonexistent", None, 10, 0, true, false).await.unwrap();
-        assert!(results.is_empty());
-
-        assert!(!storage.has(999).await.unwrap());
+    async fn test_redis_storage_metrics() {
+        let config = RedisStorageConfig::default();
+        let storage = RedisStorage::new(config).await.unwrap();
+        
+        let metrics = storage.get_operation_stats();
+        assert_eq!(metrics.operation_count, 0);
     }
 }

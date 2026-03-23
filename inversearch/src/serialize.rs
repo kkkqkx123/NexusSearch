@@ -8,7 +8,7 @@ pub mod chunked;
 use crate::r#type::{SearchResults, IntermediateSearchResults};
 use crate::error::Result;
 use crate::Index;
-use serde::{Serialize, Deserialize};
+use serde::{Serialize, Deserialize, de::DeserializeOwned};
 use std::collections::HashMap;
 
 pub use r#async::{AsyncSerializer, AsyncDocumentSerializer};
@@ -19,29 +19,59 @@ pub use chunked::{ChunkedSerializer, ChunkData, ChunkDataType, ChunkDataProvider
 pub struct SerializeConfig {
     pub format: SerializeFormat,
     pub compression: bool,
+    pub compression_algorithm: CompressionAlgorithm,
     pub compression_level: i32,
     pub chunk_size: usize,
+    pub enable_incremental: bool,
 }
 
 impl Default for SerializeConfig {
     fn default() -> Self {
         Self {
-            format: SerializeFormat::Json,
-            compression: false,
+            format: SerializeFormat::MessagePack,
+            compression: true,
+            compression_algorithm: CompressionAlgorithm::Zstd,
             compression_level: 3,
             chunk_size: 1000,
+            enable_incremental: true,
         }
     }
 }
 
 impl SerializeConfig {
     /// 创建带压缩的配置
-    pub fn with_compression(level: i32) -> Self {
+    pub fn with_compression(algorithm: CompressionAlgorithm, level: i32) -> Self {
         Self {
-            format: SerializeFormat::Binary,
+            format: SerializeFormat::MessagePack,
             compression: true,
+            compression_algorithm: algorithm,
             compression_level: level,
             chunk_size: 1000,
+            enable_incremental: true,
+        }
+    }
+
+    /// 创建高性能配置
+    pub fn high_performance() -> Self {
+        Self {
+            format: SerializeFormat::MessagePack,
+            compression: true,
+            compression_algorithm: CompressionAlgorithm::Lz4,
+            compression_level: 1,
+            chunk_size: 5000,
+            enable_incremental: true,
+        }
+    }
+
+    /// 创建高压缩比配置
+    pub fn high_compression() -> Self {
+        Self {
+            format: SerializeFormat::MessagePack,
+            compression: true,
+            compression_algorithm: CompressionAlgorithm::Zstd,
+            compression_level: 19,
+            chunk_size: 1000,
+            enable_incremental: false,
         }
     }
 }
@@ -51,6 +81,27 @@ impl SerializeConfig {
 pub enum SerializeFormat {
     Json,
     Binary,
+    MessagePack,
+    Cbor,
+}
+
+/// 压缩算法
+#[derive(Debug, Clone, Copy)]
+pub enum CompressionAlgorithm {
+    None,
+    Zstd,
+    Lz4,
+}
+
+impl CompressionAlgorithm {
+    /// 获取算法名称
+    pub fn name(&self) -> &'static str {
+        match self {
+            CompressionAlgorithm::None => "none",
+            CompressionAlgorithm::Zstd => "zstd",
+            CompressionAlgorithm::Lz4 => "lz4",
+        }
+    }
 }
 
 /// 索引数据导出结构
@@ -96,6 +147,31 @@ pub enum RegistryData {
 pub enum IndexRefData {
     MapRef(String),
     CtxRef(String, String),
+}
+
+/// 增量序列化数据
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IncrementalData {
+    pub version: String,
+    pub timestamp: String,
+    pub changes: Vec<IndexChange>,
+    pub base_snapshot: Option<String>,
+}
+
+/// 索引变更（用于增量序列化）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum IndexChange {
+    Add {
+        doc_id: u64,
+        content: String,
+    },
+    Remove {
+        doc_id: u64,
+    },
+    Update {
+        doc_id: u64,
+        content: String,
+    },
 }
 
 /// 索引配置导出
@@ -339,7 +415,7 @@ impl Index {
         let serialized = bincode::serialize(&data)?;
 
         if config.compression {
-            compress_data(&serialized, config.compression_level)
+            compress_data(&serialized, config.compression_algorithm, config.compression_level)
         } else {
             Ok(serialized)
         }
@@ -348,7 +424,7 @@ impl Index {
     /// 从二进制格式反序列化
     pub fn from_binary(binary_data: &[u8], config: &SerializeConfig) -> Result<Index> {
         let decompressed = if config.compression {
-            decompress_data(binary_data)?
+            decompress_data(binary_data, config.compression_algorithm)?
         } else {
             binary_data.to_vec()
         };
@@ -364,13 +440,13 @@ impl Index {
 
     /// 序列化为压缩的二进制格式（便捷方法）
     pub fn to_binary_compressed(&self, level: i32) -> Result<Vec<u8>> {
-        let config = SerializeConfig::with_compression(level);
+        let config = SerializeConfig::with_compression(CompressionAlgorithm::Zstd, level);
         self.to_binary(&config)
     }
 
     /// 从压缩的二进制格式反序列化（便捷方法）
     pub fn from_binary_compressed(binary_data: &[u8]) -> Result<Index> {
-        let config = SerializeConfig::with_compression(3);
+        let config = SerializeConfig::with_compression(CompressionAlgorithm::Zstd, 3);
         Self::from_binary(binary_data, &config)
     }
 
@@ -448,15 +524,32 @@ impl IndexRefData {
 }
 
 /// 压缩数据
-fn compress_data(data: &[u8], level: i32) -> Result<Vec<u8>> {
-    zstd::stream::encode_all(data, level)
-        .map_err(|e| crate::error::InversearchError::Serialization(format!("Compression error: {}", e)))
+pub fn compress_data(data: &[u8], algorithm: CompressionAlgorithm, level: i32) -> Result<Vec<u8>> {
+    match algorithm {
+        CompressionAlgorithm::None => Ok(data.to_vec()),
+        CompressionAlgorithm::Zstd => {
+            zstd::stream::encode_all(data, level)
+                .map_err(|e| crate::error::InversearchError::Serialization(format!("Compression error: {}", e)))
+        }
+        CompressionAlgorithm::Lz4 => {
+            Ok(lz4_flex::compress(data))
+        }
+    }
 }
 
 /// 解压缩数据
-fn decompress_data(data: &[u8]) -> Result<Vec<u8>> {
-    zstd::stream::decode_all(data)
-        .map_err(|e| crate::error::InversearchError::Serialization(format!("Decompression error: {}", e)))
+pub fn decompress_data(data: &[u8], algorithm: CompressionAlgorithm) -> Result<Vec<u8>> {
+    match algorithm {
+        CompressionAlgorithm::None => Ok(data.to_vec()),
+        CompressionAlgorithm::Zstd => {
+            zstd::stream::decode_all(data)
+                .map_err(|e| crate::error::InversearchError::Deserialization(format!("Decompression error: {}", e)))
+        }
+        CompressionAlgorithm::Lz4 => {
+            lz4_flex::decompress(data, usize::MAX)
+                .map_err(|e| crate::error::InversearchError::Deserialization(format!("Lz4 decompression error: {}", e)))
+        }
+    }
 }
 
 #[cfg(test)]
