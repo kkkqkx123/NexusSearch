@@ -1,5 +1,4 @@
 use crate::highlight::types::*;
-use crate::highlight::matcher::*;
 use crate::error::Result;
 
 #[derive(Debug, Clone)]
@@ -44,7 +43,6 @@ pub fn apply_advanced_boundary(
     let _first_match = match_positions[0];
     let _last_match = match_positions[match_positions.len() - 1];
 
-    // Calculate total match length
     let _total_match_length: usize = terms
         .iter()
         .filter(|term| term.is_match)

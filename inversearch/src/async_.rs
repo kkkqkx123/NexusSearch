@@ -2,7 +2,7 @@
 //! 
 //! 提供异步索引操作和搜索功能
 
-use crate::r#type::{SearchOptions, SearchResults};
+use crate::r#type::SearchOptions;
 use crate::error::Result;
 use crate::Index;
 use std::future::Future;
@@ -220,7 +220,7 @@ pub struct BatchAsyncOperations {
     operations: Vec<BatchOperation>,
 }
 
-enum BatchOperation {
+pub enum BatchOperation {
     Add { id: u64, content: String, append: bool },
     Remove { id: u64 },
     Update { id: u64, content: String },

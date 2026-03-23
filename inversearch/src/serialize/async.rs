@@ -5,7 +5,6 @@
 use crate::serialize::types::{SerializeConfig, IndexExportData};
 use crate::async_::AsyncIndex;
 use crate::error::Result;
-use std::sync::Arc;
 
 /// 异步序列化器
 pub struct AsyncSerializer {

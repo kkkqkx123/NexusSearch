@@ -1,7 +1,7 @@
 use crate::r#type::IntermediateSearchResults;
 use crate::intersect::core::intersect_simple;
 
-pub fn intersect_and(arrays: Vec<IntermediateSearchResults>, limit: usize) -> IntermediateSearchResults {
+pub fn intersect_and(arrays: Vec<IntermediateSearchResults>, _limit: usize) -> IntermediateSearchResults {
     if arrays.is_empty() {
         return vec![];
     }

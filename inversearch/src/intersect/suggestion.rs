@@ -3,7 +3,6 @@
 //! 提供搜索建议和模糊匹配功能
 
 use crate::r#type::IntermediateSearchResults;
-use std::collections::HashMap;
 
 /// 建议配置
 #[derive(Debug, Clone)]

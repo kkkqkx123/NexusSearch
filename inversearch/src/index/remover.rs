@@ -1,6 +1,5 @@
 use crate::index::{Index, DocId};
-use crate::error::{Result, InversearchError};
-use std::collections::HashMap;
+use crate::error::Result;
 
 pub fn remove_document(index: &mut Index, id: DocId, skip_deletion: bool) -> Result<()> {
     if index.fastupdate {

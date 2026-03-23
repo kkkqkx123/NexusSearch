@@ -2,11 +2,9 @@
 //!
 //! 提供 Document 类型的导入导出功能
 
-use crate::document::{Document, Field, TagSystem};
+use crate::document::Document;
 use crate::serialize::types::*;
-use crate::r#type::DocId;
 use crate::error::Result;
-use serde_json::Value;
 use bincode;
 
 impl Document {
@@ -69,7 +67,7 @@ impl Document {
         
         // 导入字段数据
         for field_export in &data.fields {
-            if let Some(field) = self.field(&field_export.name) {
+            if let Some(_field) = self.field(&field_export.name) {
                 // 由于无法获取可变引用，我们需要使用其他方式
                 // 这里简化处理，实际应用中可能需要 Document 提供可变访问方法
                 let _ = field_export;

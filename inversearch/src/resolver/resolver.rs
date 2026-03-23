@@ -463,7 +463,6 @@ pub fn resolve_default(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::r#type::SearchOptions;
 
     #[test]
     fn test_resolver_new() {

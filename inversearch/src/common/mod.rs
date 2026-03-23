@@ -1,4 +1,3 @@
-use crate::encoder::Encoder;
 use crate::error::Result;
 use serde_json::Value;
 

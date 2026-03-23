@@ -14,7 +14,7 @@
 //! let result = coordinator.search("rust programming")?;
 //! ```
 
-use crate::{SearchOptions, SearchResult, Document, Field};
+use crate::{SearchResult, Document, SearchOptions};
 use crate::error::Result;
 use crate::DocId;
 use std::collections::{HashMap, HashSet};
@@ -485,7 +485,6 @@ impl<'a> SearchCoordinator<'a> {
 mod tests {
     use super::*;
     use crate::document::{Document, DocumentConfig, FieldConfig};
-    use crate::SearchOptions;
     use serde_json::json;
 
     fn create_test_document() -> Document {

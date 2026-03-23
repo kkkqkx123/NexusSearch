@@ -1,7 +1,6 @@
 use crate::encoder::Encoder;
-use crate::keystore::{KeystoreMap, KeystoreSet, KeystoreArray, DocId, ResolutionSlot};
-use crate::tokenizer::Tokenizer;
-use crate::error::{Result, InversearchError};
+use crate::keystore::{KeystoreMap, KeystoreSet, DocId};
+use crate::error::Result;
 use crate::search::SearchCache;
 use std::collections::HashMap;
 

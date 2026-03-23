@@ -2,8 +2,7 @@ use crate::r#type::{SearchResults, EnrichedSearchResults, DocId};
 use crate::error::Result;
 use crate::Index;
 use crate::storage::{StorageInfo, StorageInterface};
-use redis::{AsyncCommands, Client as RedisClient, aio::MultiplexedConnection};
-use std::collections::HashMap;
+use redis::{Client as RedisClient, aio::MultiplexedConnection};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
 use std::sync::Arc;
@@ -29,6 +28,7 @@ impl Default for RedisStorageConfig {
 
 pub struct RedisStorage {
     client: RedisClient,
+    #[allow(dead_code)]
     config: RedisStorageConfig,
     key_prefix: String,
     memory_usage: Arc<AtomicUsize>,
@@ -169,9 +169,6 @@ impl StorageInterface for RedisStorage {
         let start_time = self.record_operation_start();
 
         let mut conn = self.get_connection().await?;
-
-        // 使用 Pipeline 批量操作，减少网络往返
-        let mut pipe = redis::pipe();
 
         // 收集所有索引项
         let mut index_items: Vec<(String, String)> = Vec::new();

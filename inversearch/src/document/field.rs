@@ -2,7 +2,7 @@
 //!
 //! 定义文档字段的配置和操作
 
-use crate::{Encoder, EncoderOptions, DocId};
+use crate::{DocId, EncoderOptions};
 use crate::index::IndexOptions;
 use crate::Index;
 use crate::document::tree::{parse_tree, TreePath, extract_value};
@@ -99,7 +99,7 @@ pub struct Field {
 
 impl Field {
     /// 创建新的字段实例
-    pub fn new(mut config: FieldConfig) -> Result<Self, crate::error::InversearchError> {
+    pub fn new(config: FieldConfig) -> Result<Self, crate::error::InversearchError> {
         let index_options = IndexOptions {
             encoder: config.encoder.clone(),
             fastupdate: Some(false),

@@ -81,7 +81,7 @@ pub fn highlight_single_document(
         .collect::<Vec<&str>>()
         .join(" ");
 
-    if let Some(boundary) = &config.boundary {
+    if config.boundary.is_some() {
         apply_boundary_simple(
             &result,
             &match_positions,

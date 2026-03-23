@@ -5,7 +5,6 @@
 use crate::r#type::{SearchResults, SearchOptions};
 use crate::error::Result;
 use crate::Index;
-use std::collections::HashMap;
 
 /// 单术语查询结果
 #[derive(Debug, Clone)]
@@ -137,7 +136,6 @@ pub fn multi_term_search(
 
     let limit = options.limit.unwrap_or(100);
     let offset = options.offset.unwrap_or(0);
-    let context = options.context;
 
     // 收集每个术语的搜索结果
     let mut intermediate_results = Vec::new();

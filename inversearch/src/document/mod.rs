@@ -29,7 +29,7 @@ pub use crate::serialize::types::{
 };
 
 use crate::{
-    Index, IndexOptions, SearchOptions, SearchResult,
+    SearchOptions, SearchResult,
     DocId,
     error::{Result, InversearchError as Error},
     keystore::KeystoreSet,
@@ -44,6 +44,7 @@ pub struct Document {
     tag_system: Option<TagSystem>,
     store: Option<HashMap<DocId, Value>>,
     reg: Register,
+    #[allow(dead_code)]
     fastupdate: bool,
 }
 

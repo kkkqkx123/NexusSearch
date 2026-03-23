@@ -44,11 +44,20 @@ pub fn compress_with_cache(input: &str, cache_size: usize) -> String {
     static mut CACHE: Option<CompressCache> = None;
     static mut TIMER_SET: bool = false;
 
-    let cache = unsafe {
-        if CACHE.is_none() {
-            CACHE = Some(CompressCache::new(cache_size));
+    let cache_ptr = unsafe {
+        let cache_ptr = &raw mut CACHE;
+        if (*cache_ptr).is_none() {
+            *cache_ptr = Some(CompressCache::new(cache_size));
         }
-        CACHE.as_ref().unwrap()
+        &raw const CACHE
+    };
+
+    let cache = unsafe {
+        if let Some(cache) = &*cache_ptr {
+            cache
+        } else {
+            return String::new();
+        }
     };
 
     if let Some(cached) = cache.get(input) {
@@ -69,12 +78,11 @@ pub fn compress_with_cache(input: &str, cache_size: usize) -> String {
             TIMER_SET = true;
             std::thread::spawn(|| {
                 std::thread::sleep(std::time::Duration::from_millis(1));
-                unsafe {
-                    if let Some(cache) = &CACHE {
-                        cache.clear();
-                    }
-                    TIMER_SET = false;
+                let cache_ptr = &raw const CACHE;
+                if let Some(cache) = &*cache_ptr {
+                    cache.clear();
                 }
+                TIMER_SET = false;
             });
         }
     }
@@ -85,7 +93,6 @@ pub fn compress_with_cache(input: &str, cache_size: usize) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::Arc;
 
     #[test]
     fn test_cache_basic() {

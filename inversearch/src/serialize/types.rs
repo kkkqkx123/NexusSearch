@@ -2,8 +2,7 @@
 //!
 //! 提供所有序列化相关的核心类型定义，作为数据的唯一来源
 
-use crate::error::Result;
-use crate::r#type::{IndexOptions, EncoderOptions, DocId};
+use crate::r#type::{IndexOptions, EncoderOptions};
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 

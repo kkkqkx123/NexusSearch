@@ -97,7 +97,7 @@ impl ChunkedSerializer {
     where
         F: FnMut(ChunkData) -> Result<()>,
     {
-        let mut items: Vec<(String, Vec<u64>)> = main_index.iter()
+        let items: Vec<(String, Vec<u64>)> = main_index.iter()
             .map(|(k, v)| (k.clone(), v.clone()))
             .collect();
 
@@ -126,7 +126,7 @@ impl ChunkedSerializer {
     where
         F: FnMut(ChunkData) -> Result<()>,
     {
-        let mut items: Vec<(String, HashMap<String, Vec<u64>>)> = context_index.iter()
+        let items: Vec<(String, HashMap<String, Vec<u64>>)> = context_index.iter()
             .map(|(k, v)| (k.clone(), v.clone()))
             .collect();
 

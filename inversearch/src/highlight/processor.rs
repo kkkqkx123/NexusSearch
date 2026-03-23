@@ -1,7 +1,6 @@
 use crate::encoder::Encoder;
 use crate::error::Result;
 use crate::highlight::types::*;
-use crate::highlight::core::*;
 use crate::highlight::boundary::*;
 use crate::highlight::matcher::*;
 use serde_json::Value;

@@ -10,7 +10,6 @@ use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Instant;
 use std::path::PathBuf;
-use async_trait::async_trait;
 
 pub mod redis;
 pub mod wal;
