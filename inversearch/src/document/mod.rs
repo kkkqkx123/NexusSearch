@@ -14,7 +14,6 @@ mod field;
 mod tree;
 mod tag;
 mod batch;
-mod serialize;
 
 use crate::search;
 
@@ -22,9 +21,11 @@ pub use field::{Field, FieldConfig, FieldType, Fields};
 pub use tree::{parse_tree, parse_tree_cached, TreePath, PathCache, EvaluationStrategy, PathParseError};
 pub use tag::{TagSystem, TagConfig};
 pub use batch::{Batch, BatchOperation, BatchExecutor, BatchExecutorFn, BatchResult, BatchStatus, BatchMetadata};
-pub use serialize::{
+
+// 从 serialize 模块导出 Document 序列化相关类型
+pub use crate::serialize::types::{
     DocumentExportData, DocumentInfo, FieldExportData, FieldConfigExport,
-    TagExportData, StoreExportData, RegistryExportData,
+    TagExportData, TagConfigExport, StoreExportData, DocumentRegistryData,
 };
 
 use crate::{

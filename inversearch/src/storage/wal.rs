@@ -461,6 +461,7 @@ mod tests {
             max_wal_size: 1024 * 1024, // 1MB
             compression: false,
             compression_level: 3,
+            ..WALConfig::default()
         };
 
         let mut wal = WALManager::new(config).await.unwrap();
@@ -488,6 +489,7 @@ mod tests {
             max_wal_size: 1024 * 1024,
             compression: true,
             compression_level: 3,
+            ..WALConfig::default()
         };
 
         let mut wal = WALManager::new(config).await.unwrap();

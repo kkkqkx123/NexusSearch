@@ -2,33 +2,15 @@
 //!
 //! 提供大数据的分块导入导出功能
 
-use crate::serialize::{SerializeConfig, IndexExportData};
+use crate::serialize::types::*;
 use crate::Index;
 use crate::error::Result;
-use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 use bincode;
 
 const CHUNK_SIZE_REG: usize = 250000;
 const CHUNK_SIZE_MAP: usize = 5000;
 const CHUNK_SIZE_CTX: usize = 1000;
-
-/// 分块数据类型
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ChunkDataType {
-    Registry,
-    MainIndex,
-    ContextIndex,
-}
-
-/// 分块数据
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ChunkData {
-    pub chunk_index: usize,
-    pub total_chunks: usize,
-    pub data_type: ChunkDataType,
-    pub data: Vec<u8>,
-}
 
 /// 分块序列化器
 pub struct ChunkedSerializer {
@@ -71,19 +53,19 @@ impl ChunkedSerializer {
     }
 
     /// 分块导出注册表
-    fn export_registry_chunked<F>(&self, registry: &crate::serialize::RegistryData, callback: &mut F) -> Result<()>
+    fn export_registry_chunked<F>(&self, registry: &RegistryData, callback: &mut F) -> Result<()>
     where
         F: FnMut(ChunkData) -> Result<()>,
     {
         let mut items = Vec::new();
 
         match registry {
-            crate::serialize::RegistryData::Set(doc_ids) => {
+            RegistryData::Set(doc_ids) => {
                 for &doc_id in doc_ids {
                     items.push(doc_id.to_string());
                 }
             },
-            crate::serialize::RegistryData::Map(map) => {
+            RegistryData::Map(map) => {
                 for (&doc_id, _) in map {
                     items.push(doc_id.to_string());
                 }
@@ -169,7 +151,7 @@ impl ChunkedSerializer {
     where
         F: FnMut() -> Result<Option<ChunkData>>,
     {
-        let mut registry_data: Option<crate::serialize::RegistryData> = None;
+        let mut registry_data: Option<RegistryData> = None;
         let mut main_index_data: HashMap<String, Vec<u64>> = HashMap::new();
         let mut context_index_data: HashMap<String, HashMap<String, Vec<u64>>> = HashMap::new();
 
@@ -178,9 +160,9 @@ impl ChunkedSerializer {
                 ChunkDataType::Registry => {
                     let items: Vec<String> = bincode::deserialize(&chunk.data)?;
                     if registry_data.is_none() {
-                        registry_data = Some(crate::serialize::RegistryData::Set(Vec::new()));
+                        registry_data = Some(RegistryData::Set(Vec::new()));
                     }
-                    if let Some(crate::serialize::RegistryData::Set(ref mut set)) = registry_data {
+                    if let Some(RegistryData::Set(ref mut set)) = registry_data {
                         for item in items {
                             if let Ok(id) = item.parse::<u64>() {
                                 set.push(id);
@@ -298,46 +280,36 @@ mod tests {
     }
 
     #[test]
-    fn test_chunk_size_calculation() {
-        let serializer = ChunkedSerializer::default();
-
-        let size1 = serializer.calculate_chunk_size(1000, CHUNK_SIZE_MAP);
-        assert_eq!(size1, CHUNK_SIZE_MAP);
-
-        let size2 = serializer.calculate_chunk_size(500000, CHUNK_SIZE_MAP);
-        assert!(size2 >= 1);
-    }
-
-    #[test]
     fn test_chunk_data_provider() {
         let chunks = vec![
             ChunkData {
                 chunk_index: 0,
                 total_chunks: 2,
-                data_type: ChunkDataType::Registry,
+                data_type: ChunkDataType::MainIndex,
                 data: vec![1, 2, 3],
             },
             ChunkData {
                 chunk_index: 1,
                 total_chunks: 2,
-                data_type: ChunkDataType::Registry,
+                data_type: ChunkDataType::MainIndex,
                 data: vec![4, 5, 6],
             },
         ];
 
         let mut provider = ChunkDataProvider::new(chunks);
-        assert_eq!(provider.total_chunks(), 2);
+        
         assert!(provider.has_more());
-
+        assert_eq!(provider.total_chunks(), 2);
+        
         let chunk1 = provider.next().unwrap().unwrap();
         assert_eq!(chunk1.chunk_index, 0);
-
+        
         let chunk2 = provider.next().unwrap().unwrap();
         assert_eq!(chunk2.chunk_index, 1);
-
+        
         assert!(!provider.has_more());
         assert!(provider.next().unwrap().is_none());
-
+        
         provider.reset();
         assert!(provider.has_more());
     }

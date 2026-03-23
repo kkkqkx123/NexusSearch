@@ -1,194 +1,13 @@
-//! 序列化模块
-//! 
-//! 提供索引的导入导出功能，支持JSON和二进制格式
+//! Index 序列化实现模块
+//!
+//! 提供 Index 类型的导入导出功能实现
 
-pub mod r#async;
-pub mod chunked;
-
-use crate::r#type::{SearchResults, IntermediateSearchResults};
 use crate::error::Result;
 use crate::Index;
-use serde::{Serialize, Deserialize, de::DeserializeOwned};
+use crate::serialize::types::*;
+use crate::serialize::format;
+use crate::serialize::compression;
 use std::collections::HashMap;
-
-pub use r#async::{AsyncSerializer, AsyncDocumentSerializer};
-pub use chunked::{ChunkedSerializer, ChunkData, ChunkDataType, ChunkDataProvider};
-
-/// 序列化配置
-#[derive(Debug, Clone)]
-pub struct SerializeConfig {
-    pub format: SerializeFormat,
-    pub compression: bool,
-    pub compression_algorithm: CompressionAlgorithm,
-    pub compression_level: i32,
-    pub chunk_size: usize,
-    pub enable_incremental: bool,
-}
-
-impl Default for SerializeConfig {
-    fn default() -> Self {
-        Self {
-            format: SerializeFormat::MessagePack,
-            compression: true,
-            compression_algorithm: CompressionAlgorithm::Zstd,
-            compression_level: 3,
-            chunk_size: 1000,
-            enable_incremental: true,
-        }
-    }
-}
-
-impl SerializeConfig {
-    /// 创建带压缩的配置
-    pub fn with_compression(algorithm: CompressionAlgorithm, level: i32) -> Self {
-        Self {
-            format: SerializeFormat::MessagePack,
-            compression: true,
-            compression_algorithm: algorithm,
-            compression_level: level,
-            chunk_size: 1000,
-            enable_incremental: true,
-        }
-    }
-
-    /// 创建高性能配置
-    pub fn high_performance() -> Self {
-        Self {
-            format: SerializeFormat::MessagePack,
-            compression: true,
-            compression_algorithm: CompressionAlgorithm::Lz4,
-            compression_level: 1,
-            chunk_size: 5000,
-            enable_incremental: true,
-        }
-    }
-
-    /// 创建高压缩比配置
-    pub fn high_compression() -> Self {
-        Self {
-            format: SerializeFormat::MessagePack,
-            compression: true,
-            compression_algorithm: CompressionAlgorithm::Zstd,
-            compression_level: 19,
-            chunk_size: 1000,
-            enable_incremental: false,
-        }
-    }
-}
-
-/// 序列化格式
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum SerializeFormat {
-    Json,
-    Binary,
-    MessagePack,
-    Cbor,
-}
-
-/// 压缩算法
-#[derive(Debug, Clone, Copy)]
-pub enum CompressionAlgorithm {
-    None,
-    Zstd,
-    Lz4,
-}
-
-impl CompressionAlgorithm {
-    /// 获取算法名称
-    pub fn name(&self) -> &'static str {
-        match self {
-            CompressionAlgorithm::None => "none",
-            CompressionAlgorithm::Zstd => "zstd",
-            CompressionAlgorithm::Lz4 => "lz4",
-        }
-    }
-}
-
-/// 索引数据导出结构
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct IndexExportData {
-    pub version: String,
-    pub created_at: String,
-    pub index_info: IndexInfo,
-    pub config: IndexConfigExport,
-    pub data: ExportData,
-}
-
-/// 索引信息
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct IndexInfo {
-    pub resolution: usize,
-    pub resolution_ctx: usize,
-    pub tokenize_mode: String,
-    pub depth: usize,
-    pub bidirectional: bool,
-    pub fastupdate: bool,
-    pub rtl: bool,
-    pub encoder_type: String,
-}
-
-/// 导出数据
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ExportData {
-    pub main_index: HashMap<String, Vec<u64>>,
-    pub context_index: HashMap<String, HashMap<String, Vec<u64>>>,
-    pub registry: RegistryData,
-}
-
-/// 注册表数据
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum RegistryData {
-    Set(Vec<u64>),                    // fastupdate = false
-    Map(HashMap<u64, Vec<IndexRefData>>), // fastupdate = true
-}
-
-/// 索引引用数据（序列化格式）
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum IndexRefData {
-    MapRef(String),
-    CtxRef(String, String),
-}
-
-/// 增量序列化数据
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct IncrementalData {
-    pub version: String,
-    pub timestamp: String,
-    pub changes: Vec<IndexChange>,
-    pub base_snapshot: Option<String>,
-}
-
-/// 索引变更（用于增量序列化）
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum IndexChange {
-    Add {
-        doc_id: u64,
-        content: String,
-    },
-    Remove {
-        doc_id: u64,
-    },
-    Update {
-        doc_id: u64,
-        content: String,
-    },
-}
-
-/// 索引配置导出
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct IndexConfigExport {
-    pub index_options: crate::r#type::IndexOptions,
-    pub encoder_options: crate::r#type::EncoderOptions,
-    pub tokenizer_config: TokenizerConfig,
-}
-
-/// 分词器配置
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TokenizerConfig {
-    pub mode: String,
-    pub separator: Option<String>,
-    pub normalize: bool,
-}
 
 impl Index {
     /// 导出索引数据
@@ -251,7 +70,6 @@ impl Index {
             for (ctx_term, doc_ids) in ctx_map {
                 ctx_data.insert(ctx_term.clone(), doc_ids.clone());
             }
-            // 简化处理，使用字符串表示
             let ctx_key_str = format!("ctx_{}", result.len());
             result.insert(ctx_key_str, ctx_data);
         }
@@ -314,7 +132,7 @@ impl Index {
     }
 
     /// 导入主索引
-    fn import_main_index(&mut self, data: &HashMap<String, Vec<u64>>) -> Result<()> {
+    pub fn import_main_index(&mut self, data: &HashMap<String, Vec<u64>>) -> Result<()> {
         for (term, doc_ids) in data {
             let term_hash = self.keystore_hash_str(term);
             self.map.index.insert(term_hash, HashMap::new());
@@ -326,7 +144,7 @@ impl Index {
     }
 
     /// 导入上下文索引
-    fn import_context_index(&mut self, data: &HashMap<String, HashMap<String, Vec<u64>>>) -> Result<()> {
+    pub fn import_context_index(&mut self, data: &HashMap<String, HashMap<String, Vec<u64>>>) -> Result<()> {
         for (ctx_key, ctx_data) in data {
             let ctx_hash = self.keystore_hash_str(ctx_key);
             self.ctx.index.insert(ctx_hash, HashMap::new());
@@ -340,17 +158,15 @@ impl Index {
     }
 
     /// 导入注册表
-    fn import_registry(&mut self, data: &RegistryData) -> Result<()> {
+    pub fn import_registry(&mut self, data: &RegistryData) -> Result<()> {
         match data {
             RegistryData::Set(doc_ids) => {
-                // 先收集所有需要处理的数据
                 let mut items_to_insert = Vec::new();
                 for &doc_id in doc_ids {
                     let doc_hash = self.keystore_hash(&doc_id.to_string());
                     items_to_insert.push((doc_hash, doc_id));
                 }
                 
-                // 然后插入数据
                 if let crate::index::Register::Set(set) = &mut self.reg {
                     for (doc_hash, doc_id) in items_to_insert {
                         set.index.entry(doc_hash).or_insert_with(std::collections::HashSet::new);
@@ -361,7 +177,6 @@ impl Index {
                 }
             },
             RegistryData::Map(doc_map) => {
-                // 先收集所有需要处理的数据
                 let mut items_to_insert = Vec::new();
                 for (&doc_id, refs) in doc_map {
                     let doc_hash = self.keystore_hash(&doc_id.to_string());
@@ -371,7 +186,6 @@ impl Index {
                     items_to_insert.push((doc_hash, doc_id, index_refs));
                 }
                 
-                // 然后插入数据
                 if let crate::index::Register::Map(map) = &mut self.reg {
                     for (doc_hash, doc_id, index_refs) in items_to_insert {
                         map.index.entry(doc_hash).or_insert_with(HashMap::new);
@@ -385,24 +199,16 @@ impl Index {
         Ok(())
     }
 
-    /// 获取上下文键字符串（辅助函数）
-    fn get_ctx_key_string(&self, _key: &usize) -> Option<String> {
-        // 这里需要实现从哈希到字符串的反向映射
-        // 为了简化，暂时返回None
-        None
-    }
-
     /// 序列化为JSON字符串
     pub fn to_json(&self, config: &SerializeConfig) -> Result<String> {
         let data = self.export(config)?;
-        Ok(serde_json::to_string_pretty(&data)?)
+        format::to_json_string(&data)
     }
 
     /// 从JSON字符串反序列化
     pub fn from_json(json_str: &str, config: &SerializeConfig) -> Result<Index> {
-        let data: IndexExportData = serde_json::from_str(json_str)?;
+        let data = format::from_json_str(json_str)?;
         
-        // 创建新的索引实例
         let mut index = Index::new(crate::index::IndexOptions::default())?;
         index.import(data, config)?;
         
@@ -412,10 +218,11 @@ impl Index {
     /// 序列化为二进制格式
     pub fn to_binary(&self, config: &SerializeConfig) -> Result<Vec<u8>> {
         let data = self.export(config)?;
-        let serialized = bincode::serialize(&data)?;
+        
+        let serialized = format::serialize_to_bytes(&data, &config.format)?;
 
         if config.compression {
-            compress_data(&serialized, config.compression_algorithm, config.compression_level)
+            compression::compress_data(&serialized, config.compression_algorithm, config.compression_level)
         } else {
             Ok(serialized)
         }
@@ -424,14 +231,13 @@ impl Index {
     /// 从二进制格式反序列化
     pub fn from_binary(binary_data: &[u8], config: &SerializeConfig) -> Result<Index> {
         let decompressed = if config.compression {
-            decompress_data(binary_data, config.compression_algorithm)?
+            compression::decompress_data(binary_data, config.compression_algorithm)?
         } else {
             binary_data.to_vec()
         };
 
-        let data: IndexExportData = bincode::deserialize(&decompressed)?;
+        let data = format::deserialize_from_bytes(&decompressed, &config.format)?;
 
-        // 创建新的索引实例
         let mut index = Index::new(crate::index::IndexOptions::default())?;
         index.import(data, config)?;
 
@@ -507,72 +313,22 @@ impl Index {
     }
 }
 
-impl IndexRefData {
-    fn from_index_ref(index_ref: &crate::index::IndexRef) -> Self {
-        match index_ref {
-            crate::index::IndexRef::MapRef(s) => IndexRefData::MapRef(s.clone()),
-            crate::index::IndexRef::CtxRef(s1, s2) => IndexRefData::CtxRef(s1.clone(), s2.clone()),
-        }
-    }
-
-    fn to_index_ref(&self) -> crate::index::IndexRef {
-        match self {
-            IndexRefData::MapRef(s) => crate::index::IndexRef::MapRef(s.clone()),
-            IndexRefData::CtxRef(s1, s2) => crate::index::IndexRef::CtxRef(s1.clone(), s2.clone()),
-        }
-    }
-}
-
-/// 压缩数据
-pub fn compress_data(data: &[u8], algorithm: CompressionAlgorithm, level: i32) -> Result<Vec<u8>> {
-    match algorithm {
-        CompressionAlgorithm::None => Ok(data.to_vec()),
-        CompressionAlgorithm::Zstd => {
-            zstd::stream::encode_all(data, level)
-                .map_err(|e| crate::error::InversearchError::Serialization(format!("Compression error: {}", e)))
-        }
-        CompressionAlgorithm::Lz4 => {
-            Ok(lz4_flex::compress(data))
-        }
-    }
-}
-
-/// 解压缩数据
-pub fn decompress_data(data: &[u8], algorithm: CompressionAlgorithm) -> Result<Vec<u8>> {
-    match algorithm {
-        CompressionAlgorithm::None => Ok(data.to_vec()),
-        CompressionAlgorithm::Zstd => {
-            zstd::stream::decode_all(data)
-                .map_err(|e| crate::error::InversearchError::Deserialization(format!("Decompression error: {}", e)))
-        }
-        CompressionAlgorithm::Lz4 => {
-            lz4_flex::decompress(data, usize::MAX)
-                .map_err(|e| crate::error::InversearchError::Deserialization(format!("Lz4 decompression error: {}", e)))
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Index;
 
     #[test]
     fn test_export_import_json() {
-        // 创建测试索引
         let mut original_index = Index::default();
         original_index.add(1, "hello world", false).unwrap();
         original_index.add(2, "rust programming", false).unwrap();
         original_index.add(3, "hello rust", false).unwrap();
 
-        // 导出为JSON
         let config = SerializeConfig::default();
         let json_str = original_index.to_json(&config).unwrap();
         
-        // 从JSON导入
         let imported_index = Index::from_json(&json_str, &config).unwrap();
         
-        // 验证导入结果
         let results = imported_index.search_simple("hello").unwrap();
         assert!(results.contains(&1));
         assert!(results.contains(&3));
@@ -581,19 +337,15 @@ mod tests {
 
     #[test]
     fn test_export_import_binary() {
-        // 创建测试索引
         let mut original_index = Index::default();
         original_index.add(1, "test document", false).unwrap();
         original_index.add(2, "another test", false).unwrap();
 
-        // 导出为二进制
         let config = SerializeConfig::default();
         let binary_data = original_index.to_binary(&config).unwrap();
         
-        // 从二进制导入
         let imported_index = Index::from_binary(&binary_data, &config).unwrap();
         
-        // 验证导入结果
         let results = imported_index.search_simple("test").unwrap();
         assert_eq!(results.len(), 2);
         assert!(results.contains(&1));
@@ -601,17 +353,39 @@ mod tests {
     }
 
     #[test]
-    fn test_serialize_config() {
-        let config = SerializeConfig {
-            format: SerializeFormat::Binary,
-            compression: true,
-            compression_level: 3,
-            chunk_size: 500,
-        };
+    fn test_serialize_format_variants() {
+        let mut index = Index::default();
+        index.add(1, "test document", false).unwrap();
+        index.add(2, "another test", false).unwrap();
 
-        assert!(matches!(config.format, SerializeFormat::Binary));
-        assert!(config.compression);
-        assert_eq!(config.compression_level, 3);
-        assert_eq!(config.chunk_size, 500);
+        let json_config = SerializeConfig {
+            format: SerializeFormat::Json,
+            compression: false,
+            ..SerializeConfig::default()
+        };
+        let json_data = index.to_binary(&json_config).unwrap();
+        let imported_json = Index::from_binary(&json_data, &json_config).unwrap();
+        let results = imported_json.search_simple("test").unwrap();
+        assert_eq!(results.len(), 2);
+
+        let mp_config = SerializeConfig {
+            format: SerializeFormat::MessagePack,
+            compression: false,
+            ..SerializeConfig::default()
+        };
+        let mp_data = index.to_binary(&mp_config).unwrap();
+        let imported_mp = Index::from_binary(&mp_data, &mp_config).unwrap();
+        let results = imported_mp.search_simple("test").unwrap();
+        assert_eq!(results.len(), 2);
+
+        let cbor_config = SerializeConfig {
+            format: SerializeFormat::Cbor,
+            compression: false,
+            ..SerializeConfig::default()
+        };
+        let cbor_data = index.to_binary(&cbor_config).unwrap();
+        let imported_cbor = Index::from_binary(&cbor_data, &cbor_config).unwrap();
+        let results = imported_cbor.search_simple("test").unwrap();
+        assert_eq!(results.len(), 2);
     }
 }
