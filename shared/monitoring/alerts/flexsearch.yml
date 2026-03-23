@@ -1,0 +1,84 @@
+groups:
+  - name: flexsearch_alerts
+    interval: 30s
+    rules:
+      - alert: HighRequestLatency
+        expr: histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m])) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High request latency detected"
+          description: "99th percentile latency is above 500ms for service {{ $labels.service }}"
+
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is above 5% for service {{ $labels.service }}"
+
+      - alert: RedisConnectionPoolExhausted
+        expr: redis_connections_active / redis_connections_active + redis_connections_idle > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis connection pool nearly exhausted"
+          description: "Connection pool utilization is above 90% for {{ $labels.service }}"
+
+      - alert: LowCacheHitRate
+        expr: rate(cache_hits_total[5m]) / (rate(cache_hits_total[5m]) + rate(cache_misses_total[5m])) < 0.5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low cache hit rate detected"
+          description: "Cache hit rate is below 50% for {{ $labels.service }}"
+
+      - alert: SearchEngineDown
+        expr: up{job=~"bm25|inversearch"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Search engine is down"
+          description: "Search engine {{ $labels.job }} has been down for more than 2 minutes"
+
+      - alert: HighSearchLatency
+        expr: histogram_quantile(0.99, rate(search_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High search latency detected"
+          description: "99th percentile search latency is above 2 seconds for {{ $labels.engine }}"
+
+      - alert: ServiceDown
+        expr: up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service is down"
+          description: "Service {{ $labels.job }} has been down for more than 2 minutes"
+
+      - alert: HighMemoryUsage
+        expr: process_resident_memory_bytes / 1024 / 1024 / 1024 > 4
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage detected"
+          description: "Service {{ $labels.job }} is using more than 4GB of memory"
+
+      - alert: HighCPUUsage
+        expr: rate(process_cpu_seconds_total[5m]) * 100 > 80
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage detected"
+          description: "Service {{ $labels.job }} is using more than 80% CPU"

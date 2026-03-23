@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  coordinator:
+    build: .
+    container_name: flexsearch-coordinator
+    ports:
+      - "50052:50052"
+      - "9090:9090"
+    environment:
+      - LOG_LEVEL=info
+    volumes:
+      - ./configs:/root/configs
+    depends_on:
+      - redis
+    networks:
+      - flexsearch-network
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: flexsearch-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - flexsearch-network
+    restart: unless-stopped
+
+networks:
+  flexsearch-network:
+    driver: bridge

@@ -1,0 +1,14 @@
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+go.sum
+vendor/
+configs/config.local.yaml
+*.log
+.DS_Store
+.env

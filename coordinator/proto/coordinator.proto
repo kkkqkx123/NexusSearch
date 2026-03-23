@@ -1,0 +1,240 @@
+syntax = "proto3";
+
+package coordinator;
+
+option go_package = "github.com/flexsearch/coordinator/proto";
+
+service Coordinator {
+  rpc Search(SearchRequest) returns (SearchResponse);
+  rpc SearchStream(stream SearchRequest) returns (stream SearchResponse);
+  rpc GetDocument(GetDocumentRequest) returns (DocumentResponse);
+  rpc AddDocument(AddDocumentRequest) returns (AddDocumentResponse);
+  rpc UpdateDocument(UpdateDocumentRequest) returns (UpdateDocumentResponse);
+  rpc DeleteDocument(DeleteDocumentRequest) returns (DeleteDocumentResponse);
+  rpc BatchDocuments(BatchDocumentsRequest) returns (BatchDocumentsResponse);
+  rpc CreateIndex(CreateIndexRequest) returns (CreateIndexResponse);
+  rpc DeleteIndex(DeleteIndexRequest) returns (DeleteIndexResponse);
+  rpc GetIndexStats(GetIndexStatsRequest) returns (IndexStatsResponse);
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+message SearchRequest {
+  string query = 1;
+  string index = 2;
+  int32 limit = 3;
+  int32 offset = 4;
+  repeated string engines = 5;
+  EngineConfig engine_config = 6;
+  map<string, string> filters = 7;
+  string sort_by = 8;
+  string sort_order = 9;
+  bool highlight = 10;
+  string highlight_field = 11;
+  int64 timeout_ms = 12;
+  string request_id = 13;
+}
+
+message EngineConfig {
+  FlexSearchConfig flexsearch = 1;
+  BM25Config bm25 = 2;
+  VectorConfig vector = 3;
+}
+
+message FlexSearchConfig {
+  bool fuzzy = 1;
+  int32 fuzziness = 2;
+  bool phrase = 3;
+  int32 proximity = 4;
+  double boost = 5;
+}
+
+message BM25Config {
+  double k1 = 1;
+  double b = 2;
+  int32 min_length = 3;
+  int32 max_length = 4;
+}
+
+message VectorConfig {
+  string model = 1;
+  int32 dimension = 2;
+  double threshold = 3;
+  int32 top_k = 4;
+  bool hybrid = 5;
+  double alpha = 6;
+}
+
+message SearchResponse {
+  string request_id = 1;
+  repeated SearchResult results = 2;
+  int64 total = 3;
+  double took_ms = 4;
+  repeated string engines_used = 5;
+  bool cache_hit = 6;
+  QueryInfo query_info = 7;
+}
+
+message SearchResult {
+  string id = 1;
+  string index = 2;
+  double score = 3;
+  string title = 4;
+  string content = 5;
+  map<string, string> highlight = 6;
+  map<string, string> fields = 7;
+  string engine_source = 8;
+  int32 rank = 9;
+}
+
+message QueryInfo {
+  string query = 1;
+  string query_type = 2;
+  int32 query_length = 3;
+  bool has_wildcard = 4;
+  bool has_phrase = 5;
+  bool has_boolean = 6;
+  bool has_special = 7;
+  int64 timestamp = 8;
+}
+
+message GetDocumentRequest {
+  string id = 1;
+  string index = 2;
+}
+
+message DocumentResponse {
+  string id = 1;
+  string index = 2;
+  bool success = 3;
+  string error = 4;
+  map<string, string> fields = 5;
+}
+
+message AddDocumentRequest {
+  string id = 1;
+  string index = 2;
+  string content = 3;
+  string title = 4;
+  map<string, string> fields = 5;
+  repeated double vector = 6;
+}
+
+message AddDocumentResponse {
+  string id = 1;
+  string index = 2;
+  bool success = 3;
+  string error = 4;
+}
+
+message UpdateDocumentRequest {
+  string id = 1;
+  string index = 2;
+  string content = 3;
+  string title = 4;
+  map<string, string> fields = 5;
+  repeated double vector = 6;
+}
+
+message UpdateDocumentResponse {
+  string id = 1;
+  string index = 2;
+  bool success = 3;
+  string error = 4;
+}
+
+message DeleteDocumentRequest {
+  string id = 1;
+  string index = 2;
+}
+
+message DeleteDocumentResponse {
+  string id = 1;
+  string index = 2;
+  bool success = 3;
+  string error = 4;
+}
+
+message BatchDocumentsRequest {
+  string index = 1;
+  repeated Document documents = 2;
+}
+
+message Document {
+  string id = 1;
+  string content = 2;
+  string title = 3;
+  map<string, string> fields = 4;
+  repeated double vector = 5;
+}
+
+message BatchDocumentsResponse {
+  string index = 1;
+  bool success = 2;
+  int32 total = 3;
+  int32 successful = 4;
+  int32 failed = 5;
+  repeated DocumentResponse results = 6;
+  repeated string errors = 7;
+}
+
+message CreateIndexRequest {
+  string name = 1;
+  map<string, string> fields = 2;
+}
+
+message CreateIndexResponse {
+  string name = 1;
+  bool success = 2;
+  string error = 3;
+  repeated string fields = 4;
+}
+
+message DeleteIndexRequest {
+  string name = 1;
+}
+
+message DeleteIndexResponse {
+  string name = 1;
+  bool success = 2;
+  string error = 3;
+}
+
+message GetIndexStatsRequest {
+  string index = 1;
+}
+
+message IndexStatsResponse {
+  string index = 1;
+  int64 document_count = 2;
+  int64 index_size = 3;
+  string last_updated = 4;
+}
+
+message HealthCheckRequest {
+  string service = 1;
+}
+
+message HealthCheckResponse {
+  string service = 1;
+  string status = 2;
+  string version = 3;
+  int64 uptime_seconds = 4;
+  int64 timestamp = 5;
+  repeated EngineHealth engines = 6;
+}
+
+message EngineHealth {
+  string name = 1;
+  string status = 2;
+  string address = 3;
+  double latency_ms = 4;
+  string error = 5;
+}
+
+message ErrorResponse {
+  string request_id = 1;
+  int32 code = 2;
+  string message = 3;
+  string details = 4;
+  int64 timestamp = 5;
+}

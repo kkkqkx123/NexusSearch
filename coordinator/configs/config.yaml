@@ -1,0 +1,68 @@
+server:
+  host: "0.0.0.0"
+  port: 50051
+  shutdown_timeout: 30s
+
+grpc:
+  host: "0.0.0.0"
+  port: 50052
+  max_recv_msg_size: 104857600
+  max_send_msg_size: 104857600
+  timeout: 30s
+
+redis:
+  host: "localhost"
+  port: 6379
+  password: ""
+  db: 0
+  pool_size: 10
+
+engines:
+  flexsearch:
+    enabled: true
+    host: "localhost"
+    port: 50053
+    timeout: 10s
+    max_retries: 3
+    pool_size: 10
+
+  bm25:
+    enabled: true
+    host: "localhost"
+    port: 50054
+    timeout: 10s
+    max_retries: 3
+    pool_size: 10
+    k1: 1.2
+    b: 0.75
+
+  vector:
+    enabled: true
+    host: "localhost"
+    port: 50055
+    timeout: 10s
+    max_retries: 3
+    pool_size: 10
+    model: "all-MiniLM-L6-v2"
+    dimension: 384
+
+cache:
+  enabled: true
+  default_ttl: 5m
+  max_size: 10000
+  eviction_policy: "lru"
+
+metrics:
+  enabled: true
+  path: "/metrics"
+  port: 9090
+
+tracing:
+  enabled: false
+  exporter: "stdout"
+  sample_rate: 1.0
+
+logging:
+  level: "info"
+  format: "json"
+  output: "stdout"

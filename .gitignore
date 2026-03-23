@@ -1,0 +1,6 @@
+.db
+node_modules
+
+**/*.exe
+**/*.zip
+target

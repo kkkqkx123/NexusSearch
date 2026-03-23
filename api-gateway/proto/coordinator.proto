@@ -1,0 +1,192 @@
+syntax = "proto3";
+
+package coordinator;
+
+option go_package = "github.com/flexsearch/api-gateway/proto";
+
+service SearchService {
+  rpc Search(SearchRequest) returns (SearchResponse);
+  rpc SearchStream(stream SearchRequest) returns (stream SearchResponse);
+}
+
+service DocumentService {
+  rpc GetDocument(GetDocumentRequest) returns (DocumentResponse);
+  rpc AddDocument(AddDocumentRequest) returns (AddDocumentResponse);
+  rpc UpdateDocument(UpdateDocumentRequest) returns (UpdateDocumentResponse);
+  rpc DeleteDocument(DeleteDocumentRequest) returns (DeleteDocumentResponse);
+  rpc BatchDocuments(BatchDocumentsRequest) returns (BatchDocumentsResponse);
+}
+
+service IndexService {
+  rpc CreateIndex(CreateIndexRequest) returns (CreateIndexResponse);
+  rpc ListIndexes(ListIndexesRequest) returns (ListIndexesResponse);
+  rpc GetIndex(GetIndexRequest) returns (GetIndexResponse);
+  rpc DeleteIndex(DeleteIndexRequest) returns (DeleteIndexResponse);
+  rpc RebuildIndex(RebuildIndexRequest) returns (RebuildIndexResponse);
+}
+
+message SearchRequest {
+  string query = 1;
+  repeated string indexes = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+  map<string, string> filters = 5;
+  repeated string fields = 6;
+  bool highlight = 7;
+  string sort_by = 8;
+  string sort_order = 9;
+  bool explain = 10;
+}
+
+message SearchResponse {
+  repeated SearchResult results = 1;
+  int32 total = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+  int32 total_pages = 5;
+  double took_ms = 6;
+}
+
+message SearchResult {
+  string id = 1;
+  double score = 2;
+  map<string, string> fields = 3;
+  map<string, string> highlights = 4;
+  map<string, double> explain = 5;
+}
+
+message GetDocumentRequest {
+  string index_id = 1;
+  string document_id = 2;
+}
+
+message DocumentResponse {
+  string id = 1;
+  map<string, string> fields = 2;
+  double score = 3;
+}
+
+message AddDocumentRequest {
+  string index_id = 1;
+  map<string, string> fields = 2;
+}
+
+message AddDocumentResponse {
+  string id = 1;
+  bool success = 2;
+  string message = 3;
+}
+
+message UpdateDocumentRequest {
+  string index_id = 1;
+  string document_id = 2;
+  map<string, string> fields = 3;
+}
+
+message UpdateDocumentResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message DeleteDocumentRequest {
+  string index_id = 1;
+  string document_id = 2;
+}
+
+message DeleteDocumentResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message BatchDocumentsRequest {
+  string index_id = 1;
+  repeated map<string, string> documents = 2;
+  bool refresh = 3;
+}
+
+message BatchDocumentsResponse {
+  int32 success_count = 1;
+  int32 failure_count = 2;
+  repeated string errors = 3;
+}
+
+message CreateIndexRequest {
+  string name = 1;
+  string index_type = 2;
+  repeated string fields = 3;
+  map<string, string> options = 4;
+}
+
+message CreateIndexResponse {
+  string id = 1;
+  bool success = 2;
+  string message = 3;
+}
+
+message ListIndexesRequest {
+  int32 page = 1;
+  int32 page_size = 2;
+}
+
+message ListIndexesResponse {
+  repeated IndexInfo indexes = 1;
+  int32 total = 2;
+}
+
+message IndexInfo {
+  string id = 1;
+  string name = 2;
+  string index_type = 3;
+  int64 document_count = 4;
+  int64 size_bytes = 5;
+  string created_at = 6;
+  string updated_at = 7;
+}
+
+message GetIndexRequest {
+  string index_id = 1;
+}
+
+message GetIndexResponse {
+  IndexInfo index = 1;
+}
+
+message DeleteIndexRequest {
+  string index_id = 1;
+}
+
+message DeleteIndexResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message RebuildIndexRequest {
+  string index_id = 1;
+  bool async = 2;
+}
+
+message RebuildIndexResponse {
+  bool success = 1;
+  string message = 2;
+  string task_id = 3;
+}
+
+message HealthCheckRequest {
+  string service = 1;
+}
+
+message HealthCheckResponse {
+  string status = 1;
+  string version = 2;
+  int64 uptime_seconds = 3;
+  map<string, string> details = 4;
+}
+
+message ServiceStatus {
+  string name = 1;
+  string address = 2;
+  string status = 3;
+  int64 latency_ms = 4;
+  string last_check = 5;
+  string message = 6;
+}
