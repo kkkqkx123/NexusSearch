@@ -113,6 +113,8 @@ pub use search::{
     FieldBoostConfig,
     FieldSearch,
     multi_field_search,
+    multi_field_search_with_weights,
+    MultiFieldSearchConfig,
 };
 pub use serialize::*;
 pub use storage::{StorageInterface, StorageInfo, MemoryStorage, FileStorage, WALStorage};

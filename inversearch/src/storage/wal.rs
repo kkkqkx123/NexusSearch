@@ -7,13 +7,14 @@ use crate::r#type::DocId;
 use crate::Index;
 use serde::{Deserialize, Serialize};
 use std::io::{BufRead, BufReader};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use tokio::fs as tokio_fs;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::Mutex;
 use chrono::{DateTime, Utc};
+use base64::{Engine as _, engine::general_purpose};
 
 /// 索引变更类型
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -171,7 +172,7 @@ impl WALManager {
     /// 记录变更到 WAL
     pub async fn record_change(&mut self, change: IndexChange) -> Result<()> {
         let serialized = bincode::serialize(&change)?;
-        let encoded = base64::encode(&serialized);
+        let encoded = general_purpose::STANDARD.encode(&serialized);
         let line = format!("{}\n", encoded);
 
         let mut file = tokio_fs::OpenOptions::new()
@@ -208,7 +209,7 @@ impl WALManager {
         let mut lines = Vec::new();
         for change in changes {
             let serialized = bincode::serialize(&change)?;
-            let encoded = base64::encode(&serialized);
+            let encoded = general_purpose::STANDARD.encode(&serialized);
             lines.push(format!("{}\n", encoded));
         }
 
@@ -367,7 +368,7 @@ impl WALManager {
 
             for line in reader.lines() {
                 if let Ok(encoded) = line {
-                    if let Ok(decoded) = base64::decode(&encoded) {
+                    if let Ok(decoded) = general_purpose::STANDARD.decode(&encoded) {
                         if let Ok(change) = bincode::deserialize::<IndexChange>(&decoded) {
                             self.apply_change(index, change)?;
                         }

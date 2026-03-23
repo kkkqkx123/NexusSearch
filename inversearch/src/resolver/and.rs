@@ -1,7 +1,7 @@
 use crate::r#type::IntermediateSearchResults;
 use crate::intersect::core::intersect_simple;
 
-pub fn intersect_and(arrays: Vec<IntermediateSearchResults>, _limit: usize) -> IntermediateSearchResults {
+pub fn intersect_and(arrays: Vec<IntermediateSearchResults>, limit: usize) -> IntermediateSearchResults {
     if arrays.is_empty() {
         return vec![];
     }
@@ -27,7 +27,13 @@ pub fn intersect_and(arrays: Vec<IntermediateSearchResults>, _limit: usize) -> I
     let flat_arrays: Vec<Vec<u64>> = arrays.into_iter().flatten().collect();
     let intersection = intersect_simple(&flat_arrays);
 
-    vec![intersection]
+    let limited_intersection = if limit > 0 && intersection.len() > limit {
+        intersection[..limit].to_vec()
+    } else {
+        intersection
+    };
+
+    vec![limited_intersection]
 }
 
 #[cfg(test)]

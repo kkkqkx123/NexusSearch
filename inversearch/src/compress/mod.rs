@@ -3,7 +3,7 @@ mod radix;
 mod cache;
 
 pub use lcg::{lcg, lcg64, lcg_for_number};
-pub use radix::{to_radix, RadixTable};
+pub use radix::{to_radix, to_radix_u32, to_radix_usize, to_radix_with_table, RadixTable};
 pub use cache::{CompressCache, compress_with_cache};
 
 pub const DEFAULT_CACHE_SIZE: usize = 200_000;

@@ -338,27 +338,6 @@ where
     }
 }
 
-fn lcg(key: &str, bit: u32) -> usize {
-    let mut hash: u32 = 0;
-    for c in key.chars() {
-        hash = (hash << 8) ^ (hash >> (32 - 8)) ^ (c as u32);
-    }
-    (hash % (1 << bit)) as usize
-}
-
-fn lcg64(key: &str, bit: u32) -> usize {
-    let mut hash: u64 = 0;
-    for c in key.chars() {
-        hash = (hash << 8) ^ (hash >> (64 - 8)) ^ (c as u64);
-    }
-    (hash % (1 << bit)) as usize
-}
-
-fn lcg_for_number<T: Into<usize>>(num: T, bit: u32) -> usize {
-    let num_val: usize = num.into();
-    num_val & ((1 << bit) - 1)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -421,15 +400,5 @@ mod tests {
 
         let slice = arr.slice(1, 3);
         assert_eq!(slice, vec![2, 3]);
-    }
-
-    #[test]
-    fn test_lcg() {
-        let hash1 = lcg("hello", 8);
-        let hash2 = lcg("hello", 8);
-        let hash3 = lcg("world", 8);
-
-        assert_eq!(hash1, hash2);
-        assert_ne!(hash1, hash3);
     }
 }

@@ -20,7 +20,7 @@ pub use coordinator::{
     FieldBoostConfig,
     FieldSearch,
 };
-pub use multi_field::multi_field_search;
+pub use multi_field::{multi_field_search, multi_field_search_with_weights, MultiFieldSearchConfig};
 
 /// 搜索结果结构体
 #[derive(Debug, Clone)]
@@ -61,7 +61,7 @@ pub fn search(index: &Index, options: &SearchOptions) -> Result<SearchResult> {
         let result = single_term_query(
             index,
             &encoded_terms[0],
-            None,
+            context.as_deref(),
             limit,
             offset,
             options.resolve.unwrap_or(true),

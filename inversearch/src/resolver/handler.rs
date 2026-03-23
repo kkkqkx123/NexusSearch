@@ -1,4 +1,4 @@
-use crate::resolver::{Resolver, ResolverOptions};
+use crate::resolver::{Resolver, ResolverOptions, resolve_default};
 use crate::r#type::{IntermediateSearchResults, SearchResults};
 
 pub struct Handler;
@@ -9,9 +9,9 @@ impl Handler {
         mut other_results: Vec<IntermediateSearchResults>,
         limit: usize,
         offset: usize,
-        _enrich: bool,
-        _resolve: bool,
-        _suggest: bool,
+        enrich: bool,
+        resolve: bool,
+        suggest: bool,
     ) -> &mut Resolver {
         if other_results.is_empty() {
             return resolver;
@@ -44,6 +44,21 @@ impl Handler {
 
                 if resolution > 0 {
                     resolver.result = crate::resolver::and::intersect_and(all_results, limit);
+                    
+                    if offset > 0 {
+                        let result_clone = resolver.result.clone();
+                        resolver.result = result_clone
+                            .into_iter()
+                            .map(|mut arr| {
+                                if arr.len() > offset {
+                                    arr = arr[offset..].to_vec();
+                                } else {
+                                    arr.clear();
+                                }
+                                arr
+                            })
+                            .collect();
+                    }
                 } else {
                     resolver.result = vec![];
                 }
@@ -52,16 +67,21 @@ impl Handler {
             }
         }
 
+        if resolve {
+            let resolved = resolve_default(&resolver.result, limit, offset, enrich);
+            resolver.result = vec![resolved];
+        }
+
         resolver
     }
 
     pub fn handle_or(
         resolver: &mut Resolver,
         mut other_results: Vec<IntermediateSearchResults>,
-        _limit: usize,
-        _offset: usize,
-        _enrich: bool,
-        _resolve: bool,
+        limit: usize,
+        offset: usize,
+        enrich: bool,
+        resolve: bool,
         _suggest: bool,
     ) -> &mut Resolver {
         if other_results.is_empty() {
@@ -78,6 +98,31 @@ impl Handler {
             }
         } else {
             resolver.result = crate::resolver::or::union_op(other_results, resolver.boostval);
+            
+            if limit > 0 || offset > 0 {
+                let result_clone = resolver.result.clone();
+                resolver.result = result_clone
+                    .into_iter()
+                    .map(|mut arr| {
+                        if arr.len() > offset {
+                            let end = if limit > 0 {
+                                (offset + limit).min(arr.len())
+                            } else {
+                                arr.len()
+                            };
+                            arr = arr[offset..end].to_vec();
+                        } else {
+                            arr.clear();
+                        }
+                        arr
+                    })
+                    .collect();
+            }
+        }
+
+        if resolve {
+            let resolved = resolve_default(&resolver.result, limit, offset, enrich);
+            resolver.result = vec![resolved];
         }
 
         resolver
@@ -85,11 +130,11 @@ impl Handler {
 
     pub fn handle_not(
         resolver: &mut Resolver,
-        mut other_results: Vec<IntermediateSearchResults>,
+        other_results: Vec<IntermediateSearchResults>,
         limit: usize,
         _offset: usize,
-        _enrich: bool,
-        _resolve: bool,
+        enrich: bool,
+        resolve: bool,
         _suggest: bool,
     ) -> &mut Resolver {
         if other_results.is_empty() || resolver.result.is_empty() {
@@ -99,16 +144,21 @@ impl Handler {
         let exclude_flat: SearchResults = other_results.into_iter().flatten().flatten().collect();
         resolver.result = crate::resolver::not::exclusion(resolver.result.clone(), &exclude_flat, limit);
 
+        if resolve {
+            let resolved = resolve_default(&resolver.result, limit, 0, enrich);
+            resolver.result = vec![resolved];
+        }
+
         resolver
     }
 
     pub fn handle_xor(
         resolver: &mut Resolver,
         mut other_results: Vec<IntermediateSearchResults>,
-        _limit: usize,
-        _offset: usize,
-        _enrich: bool,
-        _resolve: bool,
+        limit: usize,
+        offset: usize,
+        enrich: bool,
+        resolve: bool,
         _suggest: bool,
     ) -> &mut Resolver {
         if other_results.is_empty() {
@@ -125,6 +175,31 @@ impl Handler {
             }
         } else {
             resolver.result = crate::resolver::xor::xor_op(other_results, resolver.boostval);
+            
+            if limit > 0 || offset > 0 {
+                let result_clone = resolver.result.clone();
+                resolver.result = result_clone
+                    .into_iter()
+                    .map(|mut arr| {
+                        if arr.len() > offset {
+                            let end = if limit > 0 {
+                                (offset + limit).min(arr.len())
+                            } else {
+                                arr.len()
+                            };
+                            arr = arr[offset..end].to_vec();
+                        } else {
+                            arr.clear();
+                        }
+                        arr
+                    })
+                    .collect();
+            }
+        }
+
+        if resolve {
+            let resolved = resolve_default(&resolver.result, limit, offset, enrich);
+            resolver.result = vec![resolved];
         }
 
         resolver

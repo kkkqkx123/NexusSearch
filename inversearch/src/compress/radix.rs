@@ -42,16 +42,16 @@ pub fn to_radix_u64(mut number: u64, radix: usize) -> String {
     result
 }
 
+pub fn to_radix(number: u64) -> String {
+    to_radix_u64(number, DEFAULT_RADIX)
+}
+
 pub fn to_radix_u32(number: u32, radix: usize) -> String {
     to_radix_u64(number as u64, radix)
 }
 
 pub fn to_radix_usize(number: usize, radix: usize) -> String {
     to_radix_u64(number as u64, radix)
-}
-
-pub fn to_radix(number: u64) -> String {
-    to_radix_u64(number, DEFAULT_RADIX)
 }
 
 pub fn to_radix_with_table(number: u64, custom_table: &str) -> String {
