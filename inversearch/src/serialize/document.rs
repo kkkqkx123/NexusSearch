@@ -10,14 +10,17 @@ use bincode;
 impl Document {
     /// 导出 Document 数据
     pub fn export(&self, config: &SerializeConfig) -> Result<DocumentExportData> {
+        let store_enabled = self.has_store();
+        let fastupdate = self.is_fastupdate();
+        
         let document_info = DocumentInfo {
             field_count: self.len(),
-            fastupdate: false, // 简化实现
-            store_enabled: false, // 简化实现
-            tag_enabled: false, // 简化实现
+            fastupdate,
+            store_enabled,
+            tag_enabled: self.has_tag_system(),
         };
 
-        // 简化实现：只导出字段名称
+        // 导出字段数据
         let mut fields = Vec::new();
         for field_name in self.field_names() {
             let field_config = FieldConfigExport {
@@ -27,7 +30,7 @@ impl Document {
                 resolution: 9, // 默认分辨率
             };
 
-            // 获取字段的索引数据（如果可能）
+            // 获取字段的索引数据
             if let Some(field) = self.field(field_name) {
                 let index_data = field.index().export(config)?;
                 
@@ -39,9 +42,44 @@ impl Document {
             }
         }
 
+        // 导出store数据
+        let store = if let Some(store) = self.get_store() {
+            let mut documents = std::collections::HashMap::new();
+            for (doc_id, value) in store {
+                if let Ok(json_str) = serde_json::to_string(value) {
+                    documents.insert(*doc_id, json_str);
+                }
+            }
+            Some(StoreExportData {
+                documents,
+                enabled: true,
+            })
+        } else {
+            None
+        };
+
+        // 导出registry数据
+        let next_doc_id = match self.get_reg() {
+            crate::document::Register::Set(set) => {
+                let mut max_id = 0u64;
+                for (_addr, hash_set) in &set.index {
+                    for id in hash_set {
+                        if *id > max_id {
+                            max_id = *id;
+                        }
+                    }
+                }
+                max_id + 1
+            }
+            crate::document::Register::Map(map) => {
+                let max_id = map.keys().max().copied().unwrap_or(0);
+                max_id + 1
+            }
+        };
+
         let registry = DocumentRegistryData {
-            doc_count: 0,
-            next_doc_id: 1,
+            doc_count: self.len(),
+            next_doc_id,
         };
 
         Ok(DocumentExportData {
@@ -50,13 +88,13 @@ impl Document {
             document_info,
             fields,
             tags: None,
-            store: None,
+            store,
             registry,
         })
     }
 
     /// 导入 Document 数据
-    pub fn import(&mut self, data: DocumentExportData, config: &SerializeConfig) -> Result<()> {
+    pub fn import(&mut self, data: DocumentExportData, _config: &SerializeConfig) -> Result<()> {
         if data.version != "0.1.0" {
             return Err(crate::error::InversearchError::Serialization(
                 format!("Unsupported version: {}", data.version)
@@ -67,11 +105,35 @@ impl Document {
         
         // 导入字段数据
         for field_export in &data.fields {
-            if let Some(_field) = self.field(&field_export.name) {
-                // 由于无法获取可变引用，我们需要使用其他方式
-                // 这里简化处理，实际应用中可能需要 Document 提供可变访问方法
-                let _ = field_export;
-                let _ = config;
+            if let Some(field) = self.field_mut(&field_export.name) {
+                let index: &mut crate::Index = field.index_mut();
+                // 导入索引数据
+                for (term, doc_ids) in &field_export.index_data.data.main_index {
+                    for doc_id in doc_ids {
+                        index.add(*doc_id, term, false).ok();
+                    }
+                }
+            }
+        }
+
+        // 导入store数据
+        if let Some(store_data) = data.store {
+            if store_data.enabled {
+                if let Some(store) = self.get_store_mut() {
+                    for (doc_id, json_str) in store_data.documents {
+                        if let Ok(value) = serde_json::from_str(&json_str) {
+                            store.insert(doc_id, value);
+                        }
+                    }
+                }
+            }
+        }
+
+        // 导入registry数据
+        for doc_id in 0..data.registry.next_doc_id as u64 {
+            match self.get_reg_mut() {
+                crate::document::Register::Set(set) => { set.add(doc_id); }
+                crate::document::Register::Map(map) => { map.insert(doc_id, ()); }
             }
         }
 

@@ -1171,12 +1171,12 @@ mod tests {
     
     #[tokio::test]
     async fn test_file_storage() {
-        use tempfile::NamedTempFile;
+        use tempfile::TempDir;
         
-        let temp_file = NamedTempFile::new().unwrap();
-        let file_path = temp_file.path().to_str().unwrap().to_string();
+        let temp_dir = TempDir::new().unwrap();
+        let dir_path = temp_dir.path();
         
-        let mut storage = FileStorage::new(file_path);
+        let mut storage = FileStorage::new(dir_path.to_str().unwrap().to_string());
         storage.open().await.unwrap();
         
         let mut index = Index::default();
@@ -1196,7 +1196,7 @@ mod tests {
         storage.close().await.unwrap();
         
         // 重新打开并验证数据还在
-        let mut storage2 = FileStorage::new(temp_file.path().to_str().unwrap().to_string());
+        let mut storage2 = FileStorage::new(dir_path.to_str().unwrap().to_string());
         storage2.open().await.unwrap();
         
         let results2 = storage2.get("test", None, 10, 0, true, false).await.unwrap();

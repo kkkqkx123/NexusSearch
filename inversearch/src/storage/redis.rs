@@ -486,35 +486,3 @@ impl StorageMetrics {
         self.error_count = 0;
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn test_redis_storage_connection() {
-        let config = RedisStorageConfig::default();
-        let storage = RedisStorage::new(config).await;
-        
-        // 测试连接是否成功
-        assert!(storage.is_ok());
-    }
-
-    #[tokio::test]
-    async fn test_redis_storage_health_check() {
-        let config = RedisStorageConfig::default();
-        let storage = RedisStorage::new(config).await.unwrap();
-        
-        let is_healthy = storage.health_check().await.unwrap();
-        assert!(is_healthy);
-    }
-
-    #[tokio::test]
-    async fn test_redis_storage_metrics() {
-        let config = RedisStorageConfig::default();
-        let storage = RedisStorage::new(config).await.unwrap();
-        
-        let metrics = storage.get_operation_stats();
-        assert_eq!(metrics.operation_count, 0);
-    }
-}

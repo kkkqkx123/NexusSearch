@@ -50,7 +50,7 @@ pub struct Document {
 
 /// 注册表类型
 #[derive(Debug, Clone)]
-enum Register {
+pub enum Register {
     Set(KeystoreSet<DocId>),
     Map(HashMap<DocId, ()>),
 }
@@ -233,6 +233,41 @@ impl Document {
         }
     }
 
+    /// 获取store的引用（用于序列化）
+    pub fn get_store(&self) -> Option<&HashMap<DocId, Value>> {
+        self.store.as_ref()
+    }
+
+    /// 获取store的可变引用（用于序列化）
+    pub fn get_store_mut(&mut self) -> Option<&mut HashMap<DocId, Value>> {
+        self.store.as_mut()
+    }
+
+    /// 获取register的引用（用于序列化）
+    pub fn get_reg(&self) -> &Register {
+        &self.reg
+    }
+
+    /// 获取register的可变引用（用于序列化）
+    pub fn get_reg_mut(&mut self) -> &mut Register {
+        &mut self.reg
+    }
+
+    /// 检查是否启用了store
+    pub fn has_store(&self) -> bool {
+        self.store.is_some()
+    }
+
+    /// 检查是否启用了tag system
+    pub fn has_tag_system(&self) -> bool {
+        self.tag_system.is_some()
+    }
+
+    /// 检查是否启用了fastupdate
+    pub fn is_fastupdate(&self) -> bool {
+        matches!(self.reg, Register::Map(_))
+    }
+
     /// 清空所有索引
     pub fn clear(&mut self) {
         for field in &mut self.fields {
@@ -268,6 +303,11 @@ impl Document {
     /// 获取字段引用
     pub fn field(&self, name: &str) -> Option<&Field> {
         self.name_to_index.get(name).map(|&idx| &self.fields[idx])
+    }
+
+    /// 获取可变字段引用（内部使用）
+    pub fn field_mut(&mut self, name: &str) -> Option<&mut Field> {
+        self.name_to_index.get(name).copied().map(|idx| &mut self.fields[idx])
     }
 
     /// 执行批量操作
