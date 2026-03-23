@@ -1,7 +1,6 @@
 const DEFAULT_BIT: u32 = 32;
 const DEFAULT_BIT_PLUS: u32 = DEFAULT_BIT + 1;
 const DEFAULT_RANGE: u64 = 2_u64.pow(DEFAULT_BIT) - 1;
-const UINT32_MAX: u64 = u32::MAX as u64;
 
 pub fn lcg(input: &str) -> u64 {
     if input.is_empty() {
@@ -22,15 +21,18 @@ pub fn lcg64(input: &str) -> u64 {
     lcg(input)
 }
 
+#[allow(dead_code)]
 pub fn lcg_for_number<T: Into<u64>>(num: T, _bit: u32) -> u64 {
     let num_val: u64 = num.into();
     num_val & DEFAULT_RANGE
 }
 
+#[allow(dead_code)]
 pub fn lcg_for_u32(num: u32) -> u64 {
     num as u64 & DEFAULT_RANGE
 }
 
+#[allow(dead_code)]
 pub fn lcg_result_to_u32(hash: u64) -> u32 {
     (hash & DEFAULT_RANGE) as u32
 }

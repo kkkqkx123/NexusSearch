@@ -53,7 +53,7 @@ pub fn search(index: &Index, options: &SearchOptions) -> Result<SearchResult> {
 
     let limit = options.limit.unwrap_or(100);
     let offset = options.offset.unwrap_or(0);
-    let context = options.context;
+    let context = options.context.unwrap_or(false);
 
     // 根据术语数量选择不同的搜索策略
     let results = if encoded_terms.len() == 1 {
@@ -61,11 +61,11 @@ pub fn search(index: &Index, options: &SearchOptions) -> Result<SearchResult> {
         let result = single_term_query(
             index,
             &encoded_terms[0],
-            context.as_deref(),
+            None,
             limit,
             offset,
             options.resolve.unwrap_or(true),
-            options.context.unwrap_or(false),
+            context,
             None,
         )?;
         result.results

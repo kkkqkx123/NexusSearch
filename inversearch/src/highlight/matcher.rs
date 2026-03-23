@@ -22,7 +22,6 @@ pub fn find_best_match(
         };
     }
 
-    let doc_org_cur_len = doc_org_cur.chars().count();
     let doc_org_diff = if doc_enc_cur.len() < doc_org_cur.len() {
         doc_org_cur.chars().count() - doc_enc_cur.chars().count()
     } else {

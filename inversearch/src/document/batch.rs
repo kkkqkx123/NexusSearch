@@ -248,31 +248,32 @@ pub struct BatchResult {
 /// 
 /// 用于执行批量文档操作，支持并行处理和自定义工作线程数
 pub struct BatchExecutor {
-    batch_size: usize,
     parallel: bool,
     max_workers: usize,
 }
 
 impl BatchExecutor {
     /// 创建新的批量操作执行器
-    pub fn new(batch_size: usize) -> Self {
+    pub fn new(_batch_size: usize) -> Self {
         BatchExecutor {
-            batch_size,
             parallel: false,
             max_workers: 4,
         }
     }
 
+    /// 启用并行处理
     pub fn with_parallel(mut self, parallel: bool) -> Self {
         self.parallel = parallel;
         self
     }
 
+    /// 设置最大工作线程数
     pub fn with_max_workers(mut self, max_workers: usize) -> Self {
         self.max_workers = max_workers;
         self
     }
 
+    /// 执行批量添加操作
     pub fn execute_batch_add<'a>(
         &self,
         operations: &[(DocId, &'a Value)],
@@ -303,6 +304,7 @@ impl BatchExecutor {
         }
     }
 
+    /// 执行批量更新操作
     pub fn execute_batch_update<'a>(
         &self,
         operations: &[(DocId, &'a Value)],
@@ -333,6 +335,7 @@ impl BatchExecutor {
         }
     }
 
+    /// 执行批量删除操作
     pub fn execute_batch_remove(
         &self,
         operations: &[DocId],
@@ -363,6 +366,7 @@ impl BatchExecutor {
         }
     }
 
+    /// 执行混合批量操作
     pub fn execute_batch_mixed<'a>(
         &self,
         operations: &[BatchOperation<'a>],
@@ -542,5 +546,115 @@ mod tests {
         assert_eq!(add_count, 2);
         assert_eq!(update_count, 0);
         assert_eq!(remove_count, 0);
+    }
+
+    #[test]
+    fn test_batch_executor_creation() {
+        let executor = BatchExecutor::new(100);
+        assert!(!executor.parallel);
+    }
+
+    #[test]
+    fn test_batch_executor_with_parallel() {
+        let executor = BatchExecutor::new(100).with_parallel(true);
+        assert!(executor.parallel);
+    }
+
+    #[test]
+    fn test_batch_executor_with_max_workers() {
+        let executor = BatchExecutor::new(100).with_max_workers(8);
+        assert_eq!(executor.max_workers, 8);
+    }
+
+    #[test]
+    fn test_batch_executor_default() {
+        let executor = BatchExecutor::default();
+        assert!(!executor.parallel);
+    }
+
+    #[test]
+    fn test_batch_result_structure() {
+        let result = BatchResult {
+            batch_id: 1,
+            total_operations: 10,
+            successful_operations: 8,
+            failed_operations: 2,
+            errors: vec![(1, "Error".to_string()), (2, "Error".to_string())],
+            duration_ms: 100,
+        };
+        
+        assert_eq!(result.batch_id, 1);
+        assert_eq!(result.total_operations, 10);
+        assert_eq!(result.successful_operations, 8);
+        assert_eq!(result.failed_operations, 2);
+        assert_eq!(result.errors.len(), 2);
+        assert_eq!(result.duration_ms, 100);
+    }
+
+    #[test]
+    fn test_batch_metadata_creation() {
+        let metadata = BatchMetadata {
+            batch_id: 1,
+            created_at: chrono::Utc::now(),
+            status: BatchStatus::Pending,
+            total_operations: 100,
+            completed_operations: 0,
+            failed_operations: 0,
+        };
+        
+        assert_eq!(metadata.batch_id, 1);
+        assert_eq!(metadata.status, BatchStatus::Pending);
+        assert_eq!(metadata.total_operations, 100);
+    }
+
+    #[test]
+    fn test_batch_status_equality() {
+        assert_eq!(BatchStatus::Pending, BatchStatus::Pending);
+        assert_eq!(BatchStatus::InProgress, BatchStatus::InProgress);
+        assert_eq!(BatchStatus::Completed, BatchStatus::Completed);
+        assert_ne!(BatchStatus::Pending, BatchStatus::InProgress);
+    }
+
+    #[test]
+    fn test_batch_atomic() {
+        let batch = Batch::new_atomic(100);
+        assert!(batch.is_atomic());
+        assert!(!batch.is_transactional());
+    }
+
+    #[test]
+    fn test_batch_transactional() {
+        let batch = Batch::new_transactional(100);
+        assert!(batch.is_transactional());
+        assert!(!batch.is_atomic());
+    }
+
+    #[test]
+    fn test_batch_should_flush() {
+        let mut batch = Batch::new(10);
+        
+        assert!(!batch.should_flush());
+        
+        let docs: Vec<serde_json::Value> = (0..10)
+            .map(|i| json!({"title": format!("Doc {}", i)}))
+            .collect();
+        
+        for (i, doc) in docs.iter().enumerate() {
+            batch.add(i as DocId, doc);
+        }
+        
+        assert!(batch.should_flush());
+    }
+
+    #[test]
+    fn test_batch_replace_operation() {
+        let mut batch = Batch::new(100);
+        let doc1 = json!({"title": "Original"});
+        let doc2 = json!({"title": "Replaced"});
+        
+        batch.replace(1, &doc1);
+        batch.replace(2, &doc2);
+        
+        assert_eq!(batch.len(), 2);
     }
 }

@@ -369,57 +369,6 @@ pub fn extract_value(document: &Value, path: &[TreePath]) -> Option<String> {
     extract_value_with_strategy(document, path, EvaluationStrategy::Lenient).ok()
 }
 
-/// 检查路径是否存在
-pub fn path_exists(document: &Value, path: &[TreePath]) -> bool {
-    let mut current = document;
-    
-    for segment in path {
-        current = match segment {
-            TreePath::Field(name) => {
-                match current.get(name) {
-                    Some(v) => v,
-                    None => return false,
-                }
-            }
-            TreePath::Index(idx, field) => {
-                match current.get(field) {
-                    Some(v) => match v.as_array() {
-                        Some(arr) => match arr.get(*idx) {
-                            Some(v) => v,
-                            None => return false,
-                        },
-                        None => return false,
-                    },
-                    None => return false,
-                }
-            }
-            TreePath::NegativeIndex(idx, field) => {
-                match current.get(field) {
-                    Some(v) => match v.as_array() {
-                        Some(arr) => {
-                            let pos = arr.len().saturating_sub(*idx);
-                            match arr.get(pos) {
-                                Some(v) => v,
-                                None => return false,
-                            }
-                        }
-                        None => return false,
-                    },
-                    None => return false,
-                }
-            }
-            TreePath::Range(_, _, _) => {
-                return true;
-            }
-            TreePath::Wildcard(_) => {
-                return true;
-            }
-        };
-    }
-    
-    true
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -486,16 +435,5 @@ mod tests {
         let path = parse_tree("items[-1].title", &mut marker);
         let result = extract_value(&doc, &path);
         assert_eq!(result, Some("B".to_string()));
-    }
-
-    #[test]
-    fn test_path_exists() {
-        let doc = json!({"user": {"name": "John"}});
-        let mut marker = vec![];
-        let path = parse_tree("user.name", &mut marker);
-        assert!(path_exists(&doc, &path));
-        
-        let path = parse_tree("user.age", &mut marker);
-        assert!(!path_exists(&doc, &path));
     }
 }

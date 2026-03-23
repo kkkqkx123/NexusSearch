@@ -271,60 +271,26 @@ impl Document {
     }
 
     /// 执行批量操作
-    pub fn execute_batch(&mut self, batch: &crate::document::Batch) -> Result<()> {
-        for op in batch.operations() {
-            match op {
-                crate::document::BatchOperation::Add(id, content) => {
-                    self.add(*id, content)?;
-                }
-                crate::document::BatchOperation::Update(id, content) => {
-                    self.update(*id, content)?;
-                }
-                crate::document::BatchOperation::Remove(id) => {
-                    self.remove(*id)?;
-                }
-                crate::document::BatchOperation::Replace(id, content) => {
-                    self.remove(*id)?;
-                    self.add(*id, content)?;
-                }
-            }
-        }
-        Ok(())
-    }
-
-    /// 使用执行器执行批量操作
-    pub fn execute_batch_with_executor(
-        &mut self,
-        batch: &crate::document::Batch,
-        executor: &crate::document::BatchExecutor,
-    ) -> crate::document::BatchResult {
+    pub fn execute_batch(&mut self, batch: &crate::document::Batch) -> crate::document::BatchResult {
+        let executor = crate::document::BatchExecutor::new(0);
         executor.execute_batch_mixed(batch.operations(), self)
     }
 
-    /// 执行批量添加操作
-    pub fn execute_batch_add<'a>(
-        &mut self,
-        operations: &[(DocId, &'a Value)],
-        executor: &crate::document::BatchExecutor,
-    ) -> crate::document::BatchResult {
+    /// 批量添加文档
+    pub fn batch_add(&mut self, operations: &[(DocId, &Value)]) -> crate::document::BatchResult {
+        let executor = crate::document::BatchExecutor::new(0);
         executor.execute_batch_add(operations, self)
     }
 
-    /// 执行批量更新操作
-    pub fn execute_batch_update<'a>(
-        &mut self,
-        operations: &[(DocId, &'a Value)],
-        executor: &crate::document::BatchExecutor,
-    ) -> crate::document::BatchResult {
+    /// 批量更新文档
+    pub fn batch_update(&mut self, operations: &[(DocId, &Value)]) -> crate::document::BatchResult {
+        let executor = crate::document::BatchExecutor::new(0);
         executor.execute_batch_update(operations, self)
     }
 
-    /// 执行批量删除操作
-    pub fn execute_batch_remove(
-        &mut self,
-        operations: &[DocId],
-        executor: &crate::document::BatchExecutor,
-    ) -> crate::document::BatchResult {
+    /// 批量删除文档
+    pub fn batch_remove(&mut self, operations: &[DocId]) -> crate::document::BatchResult {
+        let executor = crate::document::BatchExecutor::new(0);
         executor.execute_batch_remove(operations, self)
     }
 }
@@ -505,10 +471,115 @@ mod tests {
         batch.add(2, &doc2);
         batch.add(3, &doc3);
         
-        doc.execute_batch(&batch).unwrap();
+        let result = doc.execute_batch(&batch);
         
+        assert_eq!(result.total_operations, 3);
+        assert_eq!(result.successful_operations, 3);
+        assert_eq!(result.failed_operations, 0);
         assert!(doc.contains(1));
         assert!(doc.contains(2));
+        assert!(doc.contains(3));
+    }
+
+    #[test]
+    fn test_document_batch_add() {
+        let config = DocumentConfig::new()
+            .add_field(FieldConfig::new("title"));
+        
+        let mut doc = Document::new(config).unwrap();
+        
+        let doc1 = json!({"title": "Doc 1"});
+        let doc2 = json!({"title": "Doc 2"});
+        let doc3 = json!({"title": "Doc 3"});
+        let operations = vec![
+            (1, &doc1),
+            (2, &doc2),
+            (3, &doc3),
+        ];
+        
+        let result = doc.batch_add(&operations);
+        
+        assert_eq!(result.total_operations, 3);
+        assert_eq!(result.successful_operations, 3);
+        assert_eq!(result.failed_operations, 0);
+        assert!(doc.contains(1));
+        assert!(doc.contains(2));
+        assert!(doc.contains(3));
+    }
+
+    #[test]
+    fn test_document_batch_update() {
+        let config = DocumentConfig::new()
+            .add_field(FieldConfig::new("title"))
+            .with_store();
+        
+        let mut doc = Document::new(config).unwrap();
+        doc.add(1, &json!({"title": "Original"})).unwrap();
+        doc.add(2, &json!({"title": "Original"})).unwrap();
+        
+        let doc1 = json!({"title": "Updated 1"});
+        let doc2 = json!({"title": "Updated 2"});
+        let operations = vec![
+            (1, &doc1),
+            (2, &doc2),
+        ];
+        
+        let result = doc.batch_update(&operations);
+        
+        assert_eq!(result.total_operations, 2);
+        assert_eq!(result.successful_operations, 2);
+        assert_eq!(result.failed_operations, 0);
+        
+        let stored1 = doc.get(1);
+        let stored2 = doc.get(2);
+        assert_eq!(stored1.unwrap()["title"], "Updated 1");
+        assert_eq!(stored2.unwrap()["title"], "Updated 2");
+    }
+
+    #[test]
+    fn test_document_batch_remove() {
+        let config = DocumentConfig::new()
+            .add_field(FieldConfig::new("title"));
+        
+        let mut doc = Document::new(config).unwrap();
+        doc.add(1, &json!({"title": "Doc 1"})).unwrap();
+        doc.add(2, &json!({"title": "Doc 2"})).unwrap();
+        doc.add(3, &json!({"title": "Doc 3"})).unwrap();
+        
+        let operations = vec![1, 2];
+        let result = doc.batch_remove(&operations);
+        
+        assert_eq!(result.total_operations, 2);
+        assert_eq!(result.successful_operations, 2);
+        assert_eq!(result.failed_operations, 0);
+        assert!(!doc.contains(1));
+        assert!(!doc.contains(2));
+        assert!(doc.contains(3));
+    }
+
+    #[test]
+    fn test_document_batch_mixed_operations() {
+        let config = DocumentConfig::new()
+            .add_field(FieldConfig::new("title"));
+        
+        let mut doc = Document::new(config).unwrap();
+        doc.add(1, &json!({"title": "Doc 1"})).unwrap();
+        doc.add(2, &json!({"title": "Doc 2"})).unwrap();
+        
+        let mut batch = Batch::new(100);
+        let doc3 = json!({"title": "Doc 3"});
+        let doc1_updated = json!({"title": "Updated Doc 1"});
+        batch.add(3, &doc3);
+        batch.update(1, &doc1_updated);
+        batch.remove(2);
+        
+        let result = doc.execute_batch(&batch);
+        
+        assert_eq!(result.total_operations, 3);
+        assert_eq!(result.successful_operations, 3);
+        assert_eq!(result.failed_operations, 0);
+        assert!(doc.contains(1));
+        assert!(!doc.contains(2));
         assert!(doc.contains(3));
     }
 }
