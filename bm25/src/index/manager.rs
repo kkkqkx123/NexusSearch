@@ -13,6 +13,8 @@ pub struct IndexManager {
 
 impl IndexManager {
     pub fn create<P: AsRef<Path>>(path: P) -> Result<Self> {
+        let path = path.as_ref();
+        std::fs::create_dir_all(path)?;
         let schema = Self::build_schema();
         let index = Index::create_in_dir(path, schema.clone())?;
         Ok(Self { index, schema })

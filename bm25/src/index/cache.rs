@@ -184,6 +184,7 @@ where
 
         for key in expired_keys {
             entries.remove(&key);
+            self.update_stats(|s| s.evictions += 1);
         }
 
         if entries.len() >= self.max_size {

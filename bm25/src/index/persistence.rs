@@ -28,6 +28,7 @@ impl Default for IndexMetadata {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BackupInfo {
     pub index_name: String,
+    pub backup_id: String,
     pub backup_path: PathBuf,
     pub created_at: String,
     pub size_bytes: u64,
@@ -45,34 +46,41 @@ impl PersistenceManager {
         }
     }
 
+    pub fn base_path(&self) -> &Path {
+        &self.base_path
+    }
+
     pub fn create_backup(&self, _manager: &IndexManager, index_name: &str) -> Result<BackupInfo> {
         let backup_dir = self.base_path.join("backups").join(index_name);
         fs::create_dir_all(&backup_dir)?;
 
-        let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S").to_string();
-        let backup_file = backup_dir.join(format!("backup_{}.json", timestamp));
+        let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S_%3f").to_string();
+        let backup_path = backup_dir.join(format!("backup_{}", timestamp));
 
         let index_path = self.base_path.join(index_name);
 
         if index_path.exists() {
-            fs::copy(&index_path, &backup_file)?;
+            // Copy entire directory recursively
+            if index_path.is_dir() {
+                self.copy_dir(&index_path, &backup_path)?;
+            } else {
+                fs::copy(&index_path, &backup_path)?;
+            }
         }
 
-        let metadata = fs::metadata(&backup_file)?;
-        let size_bytes = metadata.len();
+        let size_bytes = self.get_dir_size(&backup_path)?;
 
         let backup_info = BackupInfo {
             index_name: index_name.to_string(),
-            backup_path: backup_file,
+            backup_id: timestamp.clone(),
+            backup_path: backup_path.clone(),
             created_at: chrono::Utc::now().to_rfc3339(),
             size_bytes,
             document_count: 0,
         };
 
-        let backup_info_dir = self.base_path.join("backups").join(&backup_info.index_name);
-        fs::create_dir_all(&backup_info_dir)?;
-
-        let info_file = backup_info_dir.join("backup_info.json");
+        // Create independent metadata file for this backup
+        let info_file = backup_dir.join(format!("backup_info_{}.json", timestamp));
         let json = serde_json::to_string_pretty(&backup_info)?;
 
         let mut file = File::create(info_file)?;
@@ -81,14 +89,36 @@ impl PersistenceManager {
         Ok(backup_info)
     }
 
-    pub fn restore_backup(&self, index_name: &str, backup_file: &Path) -> Result<()> {
+    fn copy_dir(&self, src: &Path, dst: &Path) -> Result<()> {
+        fs::create_dir_all(dst)?;
+
+        for entry in fs::read_dir(src)? {
+            let entry = entry?;
+            let src_path = entry.path();
+            let dst_path = dst.join(entry.file_name());
+
+            if src_path.is_dir() {
+                self.copy_dir(&src_path, &dst_path)?;
+            } else {
+                fs::copy(&src_path, &dst_path)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    pub fn restore_backup(&self, index_name: &str, backup_path: &Path) -> Result<()> {
         let index_path = self.base_path.join(index_name);
 
         if index_path.exists() {
             fs::remove_dir_all(&index_path)?;
         }
 
-        fs::copy(backup_file, &index_path)?;
+        if backup_path.is_dir() {
+            self.copy_dir(backup_path, &index_path)?;
+        } else {
+            fs::copy(backup_path, &index_path)?;
+        }
 
         Ok(())
     }
@@ -106,12 +136,16 @@ impl PersistenceManager {
             let entry = entry?;
             let path = entry.path();
 
-            if path.extension().map(|e| e.to_string_lossy()) == Some("json".into()) {
-                let mut contents = String::new();
-                if let Ok(mut file) = File::open(&path) {
-                    if file.read_to_string(&mut contents).is_ok() {
-                        if let Ok(info) = serde_json::from_str::<BackupInfo>(&contents) {
-                            backups.push(info);
+            // Look for backup_info_*.json files
+            if let Some(filename) = path.file_name() {
+                let filename_str = filename.to_string_lossy();
+                if filename_str.starts_with("backup_info_") && filename_str.ends_with(".json") {
+                    let mut contents = String::new();
+                    if let Ok(mut file) = File::open(&path) {
+                        if file.read_to_string(&mut contents).is_ok() {
+                            if let Ok(info) = serde_json::from_str::<BackupInfo>(&contents) {
+                                backups.push(info);
+                            }
                         }
                     }
                 }
@@ -133,8 +167,21 @@ impl PersistenceManager {
         let mut deleted = 0u32;
 
         for backup in backups.into_iter().take(to_delete) {
-            if fs::remove_file(&backup.backup_path).is_ok() {
+            // Delete backup directory
+            if backup.backup_path.is_dir() {
+                if fs::remove_dir_all(&backup.backup_path).is_ok() {
+                    deleted += 1;
+                }
+            } else if fs::remove_file(&backup.backup_path).is_ok() {
                 deleted += 1;
+            }
+
+            // Delete corresponding metadata file using backup_id
+            let backup_dir = self.base_path.join("backups").join(index_name);
+            let info_file = backup_dir.join(format!("backup_info_{}.json", backup.backup_id));
+
+            if info_file.exists() {
+                let _ = fs::remove_file(info_file);
             }
         }
 

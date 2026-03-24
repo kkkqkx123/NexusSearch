@@ -6,10 +6,7 @@ pub mod batch;
 pub mod stats;
 pub mod search;
 pub mod cache;
-
-#[cfg(feature = "persistence")]
 pub mod persistence;
-
 pub mod tests;
 
 pub use manager::IndexManager;
