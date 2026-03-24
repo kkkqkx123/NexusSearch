@@ -1,6 +1,70 @@
 use serde::{Deserialize, Serialize};
+
+// 核心配置（库模式和服务模式都可用）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Bm25Config {
+    pub k1: f32,
+    pub b: f32,
+    pub avg_doc_length: f32,
+    pub field_weights: FieldWeights,
+}
+
+impl Default for Bm25Config {
+    fn default() -> Self {
+        Bm25Config {
+            k1: 1.2,
+            b: 0.75,
+            avg_doc_length: 100.0,
+            field_weights: FieldWeights::default(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FieldWeights {
+    pub title: f32,
+    pub content: f32,
+}
+
+impl Default for FieldWeights {
+    fn default() -> Self {
+        FieldWeights {
+            title: 2.0,
+            content: 1.0,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SearchConfig {
+    pub default_limit: usize,
+    pub max_limit: usize,
+    pub enable_highlight: bool,
+    pub highlight_fragment_size: usize,
+    pub enable_spell_check: bool,
+    pub fuzzy_matching: bool,
+    pub fuzzy_distance: u8,
+}
+
+impl Default for SearchConfig {
+    fn default() -> Self {
+        SearchConfig {
+            default_limit: 10,
+            max_limit: 100,
+            enable_highlight: true,
+            highlight_fragment_size: 200,
+            enable_spell_check: false,
+            fuzzy_matching: false,
+            fuzzy_distance: 2,
+        }
+    }
+}
+
+// 服务配置（仅服务模式可用）
+#[cfg(feature = "service")]
 use std::net::SocketAddr;
 
+#[cfg(feature = "service")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
     pub server: ServerConfig,
@@ -11,23 +75,27 @@ pub struct Config {
     pub search: SearchConfig,
 }
 
+#[cfg(feature = "service")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServerConfig {
     pub address: SocketAddr,
 }
 
+#[cfg(feature = "service")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RedisConfig {
     pub url: String,
     pub pool_size: u32,
 }
 
+#[cfg(feature = "service")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IndexConfig {
     pub data_dir: String,
     pub index_path: String,
 }
 
+#[cfg(feature = "service")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CacheConfig {
     pub enabled: bool,
@@ -35,6 +103,7 @@ pub struct CacheConfig {
     pub max_size: usize,
 }
 
+#[cfg(feature = "service")]
 impl Config {
     pub fn from_file(path: &str) -> anyhow::Result<Self> {
         let content = std::fs::read_to_string(path)?;
@@ -106,6 +175,7 @@ impl Config {
     }
 }
 
+#[cfg(feature = "service")]
 impl Default for Config {
     fn default() -> Self {
         Self {
@@ -128,65 +198,6 @@ impl Default for Config {
             },
             bm25: Bm25Config::default(),
             search: SearchConfig::default(),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Bm25Config {
-    pub k1: f32,
-    pub b: f32,
-    pub avg_doc_length: f32,
-    pub field_weights: FieldWeights,
-}
-
-impl Default for Bm25Config {
-    fn default() -> Self {
-        Bm25Config {
-            k1: 1.2,
-            b: 0.75,
-            avg_doc_length: 100.0,
-            field_weights: FieldWeights::default(),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FieldWeights {
-    pub title: f32,
-    pub content: f32,
-}
-
-impl Default for FieldWeights {
-    fn default() -> Self {
-        FieldWeights {
-            title: 2.0,
-            content: 1.0,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SearchConfig {
-    pub default_limit: usize,
-    pub max_limit: usize,
-    pub enable_highlight: bool,
-    pub highlight_fragment_size: usize,
-    pub enable_spell_check: bool,
-    pub fuzzy_matching: bool,
-    pub fuzzy_distance: u8,
-}
-
-impl Default for SearchConfig {
-    fn default() -> Self {
-        SearchConfig {
-            default_limit: 10,
-            max_limit: 100,
-            enable_highlight: true,
-            highlight_fragment_size: 200,
-            enable_spell_check: false,
-            fuzzy_matching: false,
-            fuzzy_distance: 2,
         }
     }
 }

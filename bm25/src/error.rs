@@ -13,6 +13,7 @@ pub enum Bm25Error {
     #[error("Invalid query: {0}")]
     InvalidQuery(String),
 
+    #[cfg(feature = "service")]
     #[error("Cache error: {0}")]
     CacheError(#[from] redis::RedisError),
 
@@ -22,6 +23,7 @@ pub enum Bm25Error {
     #[error("Tantivy error: {0}")]
     TantivyError(#[from] tantivy::TantivyError),
 
+    #[cfg(feature = "service")]
     #[error("Serialization error: {0}")]
     SerializationError(#[from] serde_json::Error),
 
