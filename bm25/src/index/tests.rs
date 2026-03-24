@@ -29,7 +29,7 @@ mod test_module {
 
     #[test]
     fn test_cache_basic_operations() {
-        let cache: Cache<String, i32> = Cache::new(10, 60);
+        let mut cache: Cache<String, i32> = Cache::new(10, 60);
 
         assert_eq!(cache.get(&"key1".to_string()), None);
         assert_eq!(cache.size(), 0);
@@ -48,7 +48,7 @@ mod test_module {
 
     #[test]
     fn test_cache_lru_eviction() {
-        let cache: Cache<String, i32> = Cache::new(3, 60);
+        let mut cache: Cache<String, i32> = Cache::new(3, 60);
 
         cache.insert("key1".to_string(), 1);
         cache.insert("key2".to_string(), 2);
@@ -63,7 +63,7 @@ mod test_module {
 
     #[test]
     fn test_cache_stats() {
-        let cache: Cache<String, i32> = Cache::new(10, 60);
+        let mut cache: Cache<String, i32> = Cache::new(10, 60);
 
         cache.insert("key1".to_string(), 1);
         cache.get(&"key1".to_string());
@@ -77,7 +77,7 @@ mod test_module {
 
     #[test]
     fn test_cache_clear() {
-        let cache: Cache<String, i32> = Cache::new(10, 60);
+        let mut cache: Cache<String, i32> = Cache::new(10, 60);
 
         cache.insert("key1".to_string(), 1);
         cache.insert("key2".to_string(), 2);

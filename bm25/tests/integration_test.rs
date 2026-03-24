@@ -184,7 +184,7 @@ fn test_cache_with_document_operations() {
     let schema = IndexSchema::new();
 
     // 创建缓存
-    let cache: Cache<String, String> = Cache::new(10, 60);
+    let mut cache: Cache<String, String> = Cache::new(10, 60);
 
     // 添加文档并缓存
     let mut fields = HashMap::new();

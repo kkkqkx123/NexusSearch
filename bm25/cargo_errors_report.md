@@ -2,63 +2,81 @@
 
 ## Summary
 
-- **Total Errors**: 2
-- **Total Warnings**: 3
-- **Total Issues**: 5
-- **Unique Error Patterns**: 1
-- **Unique Warning Patterns**: 2
+- **Total Errors**: 11
+- **Total Warnings**: 1
+- **Total Issues**: 12
+- **Unique Error Patterns**: 7
+- **Unique Warning Patterns**: 1
 - **Files with Issues**: 3
 
 ## Error Statistics
 
-**Total Errors**: 2
+**Total Errors**: 11
 
 ### Error Type Breakdown
 
-- **error**: 2 errors
+- **error[E0599]**: 8 errors
+- **error[E0308]**: 2 errors
+- **error[E0596]**: 1 errors
 
 ### Files with Errors (Top 10)
 
-- `tests\cache_test.rs`: 2 errors
+- `tests\cache_test.rs`: 10 errors
+- `tests\integration_test.rs`: 1 errors
 
 ## Warning Statistics
 
-**Total Warnings**: 3
+**Total Warnings**: 1
 
 ### Warning Type Breakdown
 
-- **warning**: 3 warnings
+- **warning**: 1 warnings
 
 ### Files with Warnings (Top 10)
 
-- `tests\persistence_test.rs`: 2 warnings
-- `tests\index_manager_test.rs`: 1 warnings
+- `src\index\cache.rs`: 1 warnings
 
 ## Detailed Error Categorization
 
-### error: approximate value of `f{32, 64}::consts::PI` found
+### error[E0599]: no method named `is_empty` found for struct `bm25_service::index::cache::Cache<K, V>` in the current scope: method not found in `bm25_service::index::cache::Cache<i32, std::string::String>`
+
+**Total Occurrences**: 8  
+**Unique Files**: 1
+
+#### `tests\cache_test.rs`: 8 occurrences
+
+- Line 79: no method named `is_empty` found for struct `bm25_service::index::cache::Cache<K, V>` in the current scope: method not found in `bm25_service::index::cache::Cache<i32, std::string::String>`
+- Line 83: no method named `is_empty` found for struct `bm25_service::index::cache::Cache<K, V>` in the current scope: method not found in `bm25_service::index::cache::Cache<i32, std::string::String>`
+- Line 94: no method named `is_empty` found for struct `bm25_service::index::cache::Cache<K, V>` in the current scope: method not found in `bm25_service::index::cache::Cache<std::string::String, std::string::String>`
+- ... 5 more occurrences in this file
+
+### error[E0308]: mismatched types: expected `()`, found `Option<String>`
 
 **Total Occurrences**: 2  
 **Unique Files**: 1
 
 #### `tests\cache_test.rs`: 2 occurrences
 
-- Line 241: approximate value of `f{32, 64}::consts::PI` found
-- Line 242: approximate value of `f{32, 64}::consts::PI` found
+- Line 49: mismatched types: expected `()`, found `Option<String>`
+- Line 343: mismatched types: expected `()`, found `Option<_>`
+
+### error[E0596]: cannot borrow `cache` as mutable, as it is not declared as mutable: not mutable
+
+**Total Occurrences**: 1  
+**Unique Files**: 1
+
+#### `tests\integration_test.rs`: 1 occurrences
+
+- Line 187: cannot borrow `cache` as mutable, as it is not declared as mutable: not mutable
 
 ## Detailed Warning Categorization
 
-### warning: length comparison to zero: help: using `!is_empty` is clearer and more explicit: `!fields.is_empty()`
+### warning: this `impl` can be derived
 
-**Total Occurrences**: 3  
-**Unique Files**: 2
+**Total Occurrences**: 1  
+**Unique Files**: 1
 
-#### `tests\persistence_test.rs`: 2 occurrences
+#### `src\index\cache.rs`: 1 occurrences
 
-- Line 102: function call inside of `expect`: help: try: `unwrap_or_else(|_| panic!("Failed to create backup {}", i))`
-- Line 133: function call inside of `expect`: help: try: `unwrap_or_else(|_| panic!("Failed to create backup {}", i))`
-
-#### `tests\index_manager_test.rs`: 1 occurrences
-
-- Line 216: length comparison to zero: help: using `!is_empty` is clearer and more explicit: `!fields.is_empty()`
+- Line 12: this `impl` can be derived
 

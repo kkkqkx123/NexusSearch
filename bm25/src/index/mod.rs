@@ -6,6 +6,7 @@ pub mod batch;
 pub mod stats;
 pub mod search;
 pub mod persistence;
+pub mod cache;
 pub mod tests;
 
 pub use manager::IndexManager;
