@@ -24,6 +24,9 @@ type VectorClient struct {
 	logger         *util.Logger
 	circuitBreaker *CircuitBreaker
 	retryConfig    *RetryConfig
+	qdrantClient   *QdrantClient
+	vectorIndex    *VectorIndex
+	embeddingService *EmbeddingService
 }
 
 type VectorEngineConfig struct {

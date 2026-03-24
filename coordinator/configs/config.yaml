@@ -45,6 +45,25 @@ engines:
     pool_size: 10
     model: "all-MiniLM-L6-v2"
     dimension: 384
+    qdrant_url: "http://localhost:6333"
+    grpc_url: "localhost:6334"
+    cache_ttl: 300
+    collections:
+      default:
+        dimension: 384
+        distance: "Cosine"
+        hnsw_config:
+          m: 16
+          ef_construct: 200
+          full_scan_threshold: 10000
+        optimizers_config:
+          indexing_threshold: 10000
+          max_segment_size: 200000
+          memmap_threshold: 20000
+        quantization_config:
+          scalar:
+            type: "int8"
+            always_ram: true
 
 cache:
   enabled: true

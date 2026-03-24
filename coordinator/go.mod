@@ -37,3 +37,5 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240123012728-ef4313101c80 // indirect
 	google.golang.org/protobuf v1.34.1 // indirect
 )
+
+replace github.com/flexsearch/shared v0.1.0 => ../shared

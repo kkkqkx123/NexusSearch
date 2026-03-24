@@ -168,10 +168,29 @@ func initializeEngines(cfg *config.Config, logger *util.Logger) map[string]engin
 		}, logger)
 		if err != nil {
 			logger.Errorf("Failed to create Vector client: %v", err)
-		} else if err := vectorClient.Connect(context.Background()); err != nil {
-			logger.Warnf("Failed to connect to Vector: %v", err)
 		} else {
-			engines["vector"] = vectorClient
+			if cfg.Engines.Vector.QdrantURL != "" {
+				qdrantClient, err := engine.NewQdrantClient(&config.VectorEngineConfig{
+					Enabled:    true,
+					QdrantURL:  cfg.Engines.Vector.QdrantURL,
+					GRPCURL:    cfg.Engines.Vector.GRPCURL,
+					Collections: cfg.Engines.Vector.Collections,
+					Timeout:    cfg.Engines.Vector.Timeout,
+					MaxRetries: cfg.Engines.Vector.MaxRetries,
+					CacheTTL:   cfg.Engines.Vector.CacheTTL,
+				}, logger)
+				if err != nil {
+					logger.Warnf("Failed to initialize Qdrant client: %v", err)
+				} else {
+					logger.Info("Qdrant client initialized successfully")
+					defer qdrantClient.Close()
+				}
+			}
+			if err := vectorClient.Connect(context.Background()); err != nil {
+				logger.Warnf("Failed to connect to Vector: %v", err)
+			} else {
+				engines["vector"] = vectorClient
+			}
 		}
 	}
 
