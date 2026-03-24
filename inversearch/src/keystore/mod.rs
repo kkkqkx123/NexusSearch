@@ -42,7 +42,7 @@ where
 
     pub fn set(&mut self, key: K, value: V) {
         let address = self.crc(&key);
-        let map = self.index.entry(address).or_insert_with(HashMap::new);
+        let map = self.index.entry(address).or_default();
         let old_size = map.len();
         map.insert(key, value);
         if map.len() > old_size {
@@ -53,7 +53,7 @@ where
     pub fn batch_set(&mut self, items: Vec<(K, V)>) {
         for (key, value) in items {
             let address = self.crc(&key);
-            let map = self.index.entry(address).or_insert_with(HashMap::new);
+            let map = self.index.entry(address).or_default();
             let old_size = map.len();
             map.insert(key, value);
             if map.len() > old_size {
@@ -64,7 +64,7 @@ where
 
     pub fn has(&self, key: &K) -> bool {
         let address = self.crc(key);
-        self.index.get(&address).map_or(false, |map| map.contains_key(key))
+        self.index.get(&address).is_some_and(|map| map.contains_key(key))
     }
 
     pub fn delete(&mut self, key: &K) -> bool {
@@ -168,7 +168,7 @@ where
 
     pub fn add(&mut self, key: T) {
         let address = self.crc(&key);
-        let set = self.index.entry(address).or_insert_with(HashSet::new);
+        let set = self.index.entry(address).or_default();
         let old_size = set.len();
         set.insert(key);
         if set.len() > old_size {
@@ -179,7 +179,7 @@ where
     pub fn batch_add(&mut self, items: Vec<T>) {
         for key in items {
             let address = self.crc(&key);
-            let set = self.index.entry(address).or_insert_with(HashSet::new);
+            let set = self.index.entry(address).or_default();
             let old_size = set.len();
             set.insert(key);
             if set.len() > old_size {
@@ -190,7 +190,7 @@ where
 
     pub fn has(&self, key: &T) -> bool {
         let address = self.crc(key);
-        self.index.get(&address).map_or(false, |set| set.contains(key))
+        self.index.get(&address).is_some_and(|set| set.contains(key))
     }
 
     pub fn delete(&mut self, key: &T) -> bool {
@@ -212,23 +212,11 @@ where
     }
 
     pub fn keys(&self) -> Vec<T> {
-        let mut keys = Vec::new();
-        for set in self.index.values() {
-            for key in set {
-                keys.push(key.clone());
-            }
-        }
-        keys
+        self.index.values().flat_map(|set| set.iter().cloned()).collect()
     }
 
     pub fn values(&self) -> Vec<T> {
-        let mut values = Vec::new();
-        for set in self.index.values() {
-            for value in set {
-                values.push(value.clone());
-            }
-        }
-        values
+        self.index.values().flat_map(|set| set.iter().cloned()).collect()
     }
 
     pub fn size(&self) -> usize {

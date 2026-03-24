@@ -15,8 +15,7 @@ use crate::proto::*;
 
 // Import core library types
 use crate::{
-    Index, Document, DocumentConfig, SearchResult,
-    SearchOptions,
+    Index, SearchOptions,
 };
 
 // Import storage module
@@ -28,7 +27,14 @@ use crate::index::IndexOptions;
 /// Inversearch gRPC service implementation
 pub struct InversearchService {
     index: Arc<RwLock<Index>>,
+    #[allow(dead_code)]
     storage: Arc<RwLock<dyn StorageInterface + Send + Sync>>,
+}
+
+impl Default for InversearchService {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl InversearchService {

@@ -44,7 +44,7 @@ impl RedisStorage {
             .map_err(|e| crate::error::StorageError::Connection(e.to_string()))?;
 
         let mut conn = client
-            .get_async_connection()
+            .get_multiplexed_async_connection()
             .await
             .map_err(|e| crate::error::StorageError::Connection(e.to_string()))?;
 
@@ -94,7 +94,7 @@ impl RedisStorage {
         // 收集所有索引项
         let mut index_items: Vec<(String, String)> = Vec::new();
 
-        for (_term_hash, doc_ids) in &index.map.index {
+        for doc_ids in index.map.index.values() {
             for (term_str, ids) in doc_ids {
                 let key = self.make_index_key(term_str);
                 let serialized = serde_json::to_string(ids)
@@ -103,7 +103,7 @@ impl RedisStorage {
             }
         }
 
-        for (_ctx_key, ctx_map) in &index.ctx.index {
+        for ctx_map in index.ctx.index.values() {
             for (ctx_term, doc_ids) in ctx_map {
                 let key = self.make_context_key("default", ctx_term);
                 let serialized = serde_json::to_string(doc_ids)
@@ -173,7 +173,7 @@ impl StorageInterface for RedisStorage {
         // 收集所有索引项
         let mut index_items: Vec<(String, String)> = Vec::new();
 
-        for (_term_hash, doc_ids) in &index.map.index {
+        for doc_ids in index.map.index.values() {
             for (term_str, ids) in doc_ids {
                 let key = self.make_index_key(term_str);
                 let serialized = serde_json::to_string(ids)
@@ -182,7 +182,7 @@ impl StorageInterface for RedisStorage {
             }
         }
 
-        for (_ctx_key, ctx_map) in &index.ctx.index {
+        for ctx_map in index.ctx.index.values() {
             for (ctx_term, doc_ids) in ctx_map {
                 let key = self.make_context_key("default", ctx_term);
                 let serialized = serde_json::to_string(doc_ids)

@@ -149,19 +149,19 @@ impl AsyncResolver {
                 match method.as_str() {
                     "and" => {
                         let op_results: Vec<IntermediateSearchResults> = vec![vec![search_ids.clone()]];
-                        crate::resolver::handler::Handler::handle_and(&mut current, op_results, limit, offset, enrich, resolve, suggest);
+                        crate::resolver::handler::Handler::handle_and(&mut current, op_results, limit, offset, enrich, resolve);
                     }
                     "or" => {
                         let op_results: Vec<IntermediateSearchResults> = vec![vec![search_ids.clone()]];
-                        crate::resolver::handler::Handler::handle_or(&mut current, op_results, limit, offset, enrich, resolve, suggest);
+                        crate::resolver::handler::Handler::handle_or(&mut current, op_results, limit, offset, enrich, resolve);
                     }
                     "not" => {
                         let op_results: Vec<IntermediateSearchResults> = vec![vec![search_ids.clone()]];
-                        crate::resolver::handler::Handler::handle_not(&mut current, op_results, limit, offset, enrich, resolve, suggest);
+                        crate::resolver::handler::Handler::handle_not(&mut current, op_results, limit, offset, enrich, resolve);
                     }
                     "xor" => {
                         let op_results: Vec<IntermediateSearchResults> = vec![vec![search_ids.clone()]];
-                        crate::resolver::handler::Handler::handle_xor(&mut current, op_results, limit, offset, enrich, resolve, suggest);
+                        crate::resolver::handler::Handler::handle_xor(&mut current, op_results, limit, offset, enrich, resolve);
                     }
                     _ => {
                         current.result = vec![search_ids];

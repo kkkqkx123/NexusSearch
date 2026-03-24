@@ -11,7 +11,6 @@ impl Handler {
         offset: usize,
         enrich: bool,
         resolve: bool,
-        suggest: bool,
     ) -> &mut Resolver {
         if other_results.is_empty() {
             return resolver;
@@ -82,7 +81,6 @@ impl Handler {
         offset: usize,
         enrich: bool,
         resolve: bool,
-        _suggest: bool,
     ) -> &mut Resolver {
         if other_results.is_empty() {
             return resolver;
@@ -135,7 +133,6 @@ impl Handler {
         _offset: usize,
         enrich: bool,
         resolve: bool,
-        _suggest: bool,
     ) -> &mut Resolver {
         if other_results.is_empty() || resolver.result.is_empty() {
             return resolver;
@@ -159,7 +156,6 @@ impl Handler {
         offset: usize,
         enrich: bool,
         resolve: bool,
-        _suggest: bool,
     ) -> &mut Resolver {
         if other_results.is_empty() {
             return resolver;
@@ -317,19 +313,19 @@ impl Handler {
                         "and" => {
                             current.result = vec![result_ids.clone()];
                             let op_results: Vec<IntermediateSearchResults> = vec![current.result.clone()];
-                            Handler::handle_and(&mut current, op_results, limit, offset, enrich, resolve, suggest);
+                            Handler::handle_and(&mut current, op_results, limit, offset, enrich, resolve);
                         }
                         "or" => {
                             let op_results: Vec<IntermediateSearchResults> = vec![vec![result_ids.clone()]];
-                            Handler::handle_or(&mut current, op_results, limit, offset, enrich, resolve, suggest);
+                            Handler::handle_or(&mut current, op_results, limit, offset, enrich, resolve);
                         }
                         "not" => {
                             let op_results: Vec<IntermediateSearchResults> = vec![vec![result_ids.clone()]];
-                            Handler::handle_not(&mut current, op_results, limit, offset, enrich, resolve, suggest);
+                            Handler::handle_not(&mut current, op_results, limit, offset, enrich, resolve);
                         }
                         "xor" => {
                             let op_results: Vec<IntermediateSearchResults> = vec![vec![result_ids.clone()]];
-                            Handler::handle_xor(&mut current, op_results, limit, offset, enrich, resolve, suggest);
+                            Handler::handle_xor(&mut current, op_results, limit, offset, enrich, resolve);
                         }
                         _ => {
                             current.result = vec![result_ids];

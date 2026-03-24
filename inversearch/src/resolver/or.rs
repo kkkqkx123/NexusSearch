@@ -1,6 +1,6 @@
 use crate::r#type::IntermediateSearchResults;
 
-pub fn union_op(arrays: Vec<IntermediateSearchResults>, boost: i32) -> IntermediateSearchResults {
+pub fn union_op(arrays: Vec<IntermediateSearchResults>, _boost: i32) -> IntermediateSearchResults {
     if arrays.is_empty() {
         return vec![];
     }

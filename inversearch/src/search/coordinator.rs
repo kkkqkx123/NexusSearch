@@ -19,6 +19,9 @@ use crate::error::Result;
 use crate::DocId;
 use std::collections::{HashMap, HashSet};
 
+// Type alias for complex type
+type FieldBoostCondition = Box<dyn Fn(&serde_json::Value) -> bool + Send + Sync>;
+
 /// 字段搜索配置
 #[derive(Debug, Clone)]
 pub struct FieldSearch {
@@ -66,7 +69,7 @@ pub struct FieldBoostConfig {
     pub field_name: String,
     pub weight: f32,
     pub strategy: BoostStrategy,
-    pub condition: Option<Box<dyn Fn(&serde_json::Value) -> bool + Send + Sync>>,
+    pub condition: Option<FieldBoostCondition>,
 }
 
 impl Clone for FieldBoostConfig {
@@ -198,9 +201,10 @@ impl MultiFieldSearchOptions {
 }
 
 /// 结果合并策略
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub enum CombineStrategy {
     /// 任一字段匹配即可（并集）
+    #[default]
     Or,
     /// 所有字段都必须匹配（交集）
     And,
@@ -208,12 +212,6 @@ pub enum CombineStrategy {
     Weight,
     /// 最佳字段匹配
     BestField,
-}
-
-impl Default for CombineStrategy {
-    fn default() -> Self {
-        CombineStrategy::Or
-    }
 }
 
 /// 搜索协调器

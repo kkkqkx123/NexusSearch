@@ -195,17 +195,17 @@ impl StorageInterface for MemoryStorage {
         let start_time = self.record_operation_start();
         
         // 从索引导出数据到存储
-        for (_term_hash, doc_ids) in &index.map.index {
+        for doc_ids in index.map.index.values() {
             for (term_str, ids) in doc_ids {
                 self.data.insert(term_str.clone(), ids.clone());
             }
         }
         
         // 导出上下文数据
-        for (_ctx_key, ctx_map) in &index.ctx.index {
+        for ctx_map in index.ctx.index.values() {
             for (ctx_term, doc_ids) in ctx_map {
                 self.context_data.entry("default".to_string())
-                    .or_insert_with(HashMap::new)
+                    .or_default()
                     .insert(ctx_term.clone(), doc_ids.clone());
             }
         }
@@ -261,21 +261,21 @@ impl StorageInterface for MemoryStorage {
     
     async fn has(&self, id: DocId) -> Result<bool> {
         // 检查文档ID是否存在于索引数据中
-        for (_term, doc_ids) in &self.data {
+        for doc_ids in self.data.values() {
             if doc_ids.contains(&id) {
                 return Ok(true);
             }
         }
-        
+
         // 检查上下文数据
-        for (_ctx, ctx_map) in &self.context_data {
-            for (_term, doc_ids) in ctx_map {
+        for ctx_map in self.context_data.values() {
+            for doc_ids in ctx_map.values() {
                 if doc_ids.contains(&id) {
                     return Ok(true);
                 }
             }
         }
-        
+
         Ok(false)
     }
     
@@ -510,16 +510,16 @@ impl StorageInterface for FileStorage {
     async fn commit(&mut self, index: &Index, _replace: bool, _append: bool) -> Result<()> {
         let start_time = self.record_operation_start();
 
-        for (_term_hash, doc_ids) in &index.map.index {
+        for doc_ids in index.map.index.values() {
             for (term_str, ids) in doc_ids {
                 self.data.insert(term_str.clone(), ids.clone());
             }
         }
 
-        for (_ctx_key, ctx_map) in &index.ctx.index {
+        for ctx_map in index.ctx.index.values() {
             for (ctx_term, doc_ids) in ctx_map {
                 self.context_data.entry("default".to_string())
-                    .or_insert_with(HashMap::new)
+                    .or_default()
                     .insert(ctx_term.clone(), doc_ids.clone());
             }
         }

@@ -2,6 +2,10 @@ use crate::r#type::{SearchResults, EnrichedSearchResults, EnrichedSearchResult};
 use serde_json::Value;
 use std::collections::HashMap;
 
+// Type aliases for complex types
+type TagTransformFn = Box<dyn Fn(&Value) -> Value + Send + Sync>;
+type TagFilterFn = Box<dyn Fn(&Value) -> bool + Send + Sync>;
+
 /// 字段选择配置
 #[derive(Debug, Clone)]
 pub struct FieldSelector {
@@ -33,8 +37,8 @@ impl FieldSelector {
 /// 标签整合配置
 pub struct TagIntegrationConfig {
     pub tag_field: String,
-    pub transform_fn: Option<Box<dyn Fn(&Value) -> Value + Send + Sync>>,
-    pub filter_fn: Option<Box<dyn Fn(&Value) -> bool + Send + Sync>>,
+    pub transform_fn: Option<TagTransformFn>,
+    pub filter_fn: Option<TagFilterFn>,
 }
 
 impl Clone for TagIntegrationConfig {
@@ -93,8 +97,8 @@ pub struct HighlightConfig {
     pub fragment_length: usize,
 }
 
-impl HighlightConfig {
-    pub fn new() -> Self {
+impl Default for HighlightConfig {
+    fn default() -> Self {
         HighlightConfig {
             fields: Vec::new(),
             before_marker: "<em>".to_string(),
@@ -102,6 +106,12 @@ impl HighlightConfig {
             fragment_count: 3,
             fragment_length: 150,
         }
+    }
+}
+
+impl HighlightConfig {
+    pub fn new() -> Self {
+        Self::default()
     }
 
     pub fn with_fields(mut self, fields: Vec<String>) -> Self {

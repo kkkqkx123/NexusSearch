@@ -9,9 +9,7 @@ pub fn add_document(
     append: bool,
     skip_update: bool,
 ) -> Result<()> {
-    if content.is_empty() || id == 0 {
-        return Ok(());
-    }
+    if content.is_empty() || id == 0 { return Ok(()) }
 
     if !skip_update && !append {
         if index.contains(id) {

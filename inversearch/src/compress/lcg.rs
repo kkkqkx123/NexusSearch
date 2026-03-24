@@ -45,7 +45,6 @@ mod tests {
     fn test_lcg_basic() {
         let hash = lcg("hello");
         assert!(hash > 0);
-        assert!(hash <= u64::MAX);
     }
 
     #[test]
