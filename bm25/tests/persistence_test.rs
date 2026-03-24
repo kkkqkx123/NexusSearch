@@ -99,7 +99,7 @@ fn test_delete_old_backups() {
     // 创建 5 个备份
     for i in 0..5 {
         let _ = persistence_manager.create_backup(&index_manager, "test_index")
-            .expect(&format!("Failed to create backup {}", i));
+            .unwrap_or_else(|_| panic!("Failed to create backup {}", i));
         std::thread::sleep(std::time::Duration::from_millis(50));
     }
 
@@ -130,7 +130,7 @@ fn test_delete_old_backups_keep_all() {
     // 创建 3 个备份
     for i in 0..3 {
         let _ = persistence_manager.create_backup(&index_manager, "test_index")
-            .expect(&format!("Failed to create backup {}", i));
+            .unwrap_or_else(|_| panic!("Failed to create backup {}", i));
         std::thread::sleep(std::time::Duration::from_millis(50));
     }
 

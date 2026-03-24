@@ -1,29 +1,23 @@
-// 核心模块（始终编译）
+// Core modules (always compiled)
 pub mod config;
 pub mod error;
 pub mod index;
 
-// 功能模块（条件编译）
-#[cfg(feature = "service")]
-pub mod metrics;
-
-#[cfg(feature = "service")]
-pub mod proto;
-
+// Service module (conditional compilation)
 #[cfg(feature = "service")]
 pub mod service;
 
-// 导出核心API（库模式和服务模式都可使用）
+// Re-export core API (available in both library and service mode)
 pub use config::{Bm25Config, FieldWeights, SearchConfig};
 pub use error::{Bm25Error, Result};
 pub use index::{IndexManager, IndexSchema};
 
-// 导出服务API（仅服务模式可用）
+// Re-export service API (only available in service mode)
 #[cfg(feature = "service")]
-pub use config::Config;
+pub use service::{Config, ServerConfig, RedisConfig, IndexConfig, CacheConfig};
 
 #[cfg(feature = "service")]
-pub use metrics::{init_logging, init_metrics};
+pub use service::{init_logging, init_metrics};
 
 #[cfg(feature = "service")]
 pub use service::{BM25Service, run_server};

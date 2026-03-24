@@ -1,14 +1,12 @@
-#![cfg(feature = "service")]
-
-use crate::config::Config;
-use crate::proto::{
+use super::config::Config;
+use super::proto::{
     BatchIndexDocumentsRequest, BatchIndexDocumentsResponse, ClearIndexRequest,
     ClearIndexResponse, DeleteDocumentRequest, DeleteDocumentResponse, GetStatsRequest,
     GetStatsResponse, IndexDocumentRequest, IndexDocumentResponse, SearchRequest,
     SearchResponse,
 };
-use crate::proto::Bm25Service as Bm25ServiceTrait;
-use crate::proto::Bm25ServiceServer;
+use super::proto::Bm25Service as Bm25ServiceTrait;
+use super::proto::Bm25ServiceServer;
 use crate::{IndexManager, IndexSchema};
 use crate::index::{document, delete, batch, stats, search};
 use std::collections::HashMap;
@@ -121,7 +119,7 @@ impl Bm25ServiceTrait for BM25Service {
 
         let total_count = results.len();
         let search_results = results.into_iter().map(|r| {
-            crate::proto::SearchResult {
+            super::proto::SearchResult {
                 document_id: r.document_id,
                 score: r.score,
                 fields: r.fields,
@@ -179,7 +177,7 @@ impl Bm25ServiceTrait for BM25Service {
         let req = request.into_inner();
         tracing::info!("Received clear index request: index={}", req.index_name);
 
-        // 获取清除前的文档数量
+        // Get document count before clearing
         let (manager, _schema) = self.get_or_create_index(&req.index_name).await?;
         let stats = stats::get_stats(&manager).map_err(|e| {
             Status::internal(format!("Failed to get stats: {}", e))
@@ -187,14 +185,14 @@ impl Bm25ServiceTrait for BM25Service {
 
         let cleared_count = stats.total_documents as i32;
 
-        // 删除索引目录
+        // Delete index directory
         let index_path = self.index_path.join(&req.index_name);
         if index_path.exists() {
             std::fs::remove_dir_all(&index_path).map_err(|e| {
                 Status::internal(format!("Failed to remove index directory: {}", e))
             })?;
 
-            // 从内存中移除索引引用
+            // Remove index reference from memory
             let mut indexes = self.indexes.write().await;
             indexes.remove(&req.index_name);
 

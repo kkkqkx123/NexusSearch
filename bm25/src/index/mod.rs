@@ -5,7 +5,6 @@ pub mod delete;
 pub mod batch;
 pub mod stats;
 pub mod search;
-pub mod cache;
 pub mod persistence;
 pub mod tests;
 

@@ -213,7 +213,7 @@ fn test_create_index_with_relative_path() {
 
     assert!(full_path.exists());
     let fields: Vec<_> = manager.schema().fields().collect();
-    assert!(fields.len() > 0);
+    assert!(!fields.is_empty());
 }
 
 #[test]

@@ -238,8 +238,8 @@ fn test_cache_with_different_types() {
 
     // 测试字符串键，浮点数值
     let cache3: Cache<String, f64> = Cache::new(10, 60);
-    cache3.insert("key".to_string(), 3.14);
-    assert_eq!(cache3.get(&"key".to_string()), Some(3.14));
+    cache3.insert("key".to_string(), std::f64::consts::PI);
+    assert_eq!(cache3.get(&"key".to_string()), Some(std::f64::consts::PI));
 }
 
 #[test]
