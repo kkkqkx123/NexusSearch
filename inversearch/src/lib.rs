@@ -18,6 +18,13 @@ pub mod tokenizer;
 pub mod r#type;
 pub mod async_;
 
+// Service-related modules - only compiled when "service" feature is enabled
+#[cfg(feature = "service")]
+pub mod proto;
+
+#[cfg(feature = "service")]
+pub mod service;
+
 // Re-export document types
 pub use document::{
     Document,

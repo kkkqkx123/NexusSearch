@@ -1,8 +1,9 @@
 use bm25_service::Config;
 use bm25_service::proto::{
-    BatchIndexDocumentsRequest, BatchIndexDocumentsResponse, DeleteDocumentRequest,
-    DeleteDocumentResponse, GetStatsRequest, GetStatsResponse, IndexDocumentRequest,
-    IndexDocumentResponse, SearchRequest, SearchResponse,
+    BatchIndexDocumentsRequest, BatchIndexDocumentsResponse, ClearIndexRequest,
+    ClearIndexResponse, DeleteDocumentRequest, DeleteDocumentResponse, GetStatsRequest,
+    GetStatsResponse, IndexDocumentRequest, IndexDocumentResponse, SearchRequest,
+    SearchResponse,
 };
 use bm25_service::proto::Bm25Service as Bm25ServiceTrait;
 use bm25_service::proto::Bm25ServiceServer;
@@ -157,15 +158,55 @@ impl Bm25ServiceTrait for BM25Service {
     ) -> Result<Response<GetStatsResponse>, Status> {
         let req = request.into_inner();
         tracing::info!("Received get stats request: index={}", req.index_name);
-        
+
         let (manager, _schema) = self.get_or_create_index(&req.index_name).await?;
         let index_stats = stats::get_stats(&manager)
             .map_err(|e| Status::internal(format!("Failed to get stats: {}", e)))?;
-        
+
         Ok(Response::new(GetStatsResponse {
             total_documents: index_stats.total_documents as i64,
             total_terms: index_stats.total_terms as i64,
             avg_document_length: index_stats.avg_document_length,
+        }))
+    }
+
+    async fn clear_index(
+        &self,
+        request: Request<ClearIndexRequest>,
+    ) -> Result<Response<ClearIndexResponse>, Status> {
+        let req = request.into_inner();
+        tracing::info!("Received clear index request: index={}", req.index_name);
+
+        // 获取清除前的文档数量
+        let (manager, _schema) = self.get_or_create_index(&req.index_name).await?;
+        let stats = stats::get_stats(&manager).map_err(|e| {
+            Status::internal(format!("Failed to get stats: {}", e))
+        })?;
+
+        let cleared_count = stats.total_documents as i32;
+
+        // 删除索引目录
+        let index_path = self.index_path.join(&req.index_name);
+        if index_path.exists() {
+            std::fs::remove_dir_all(&index_path).map_err(|e| {
+                Status::internal(format!("Failed to remove index directory: {}", e))
+            })?;
+
+            // 从内存中移除索引引用
+            let mut indexes = self.indexes.write().await;
+            indexes.remove(&req.index_name);
+
+            tracing::info!(
+                "Cleared index '{}': {} documents removed",
+                req.index_name,
+                cleared_count
+            );
+        }
+
+        Ok(Response::new(ClearIndexResponse {
+            success: true,
+            message: format!("Index '{}' cleared successfully", req.index_name),
+            cleared_count,
         }))
     }
 }

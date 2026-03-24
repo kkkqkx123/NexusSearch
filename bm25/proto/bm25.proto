@@ -8,6 +8,7 @@ service BM25Service {
   rpc Search(SearchRequest) returns (SearchResponse);
   rpc DeleteDocument(DeleteDocumentRequest) returns (DeleteDocumentResponse);
   rpc GetStats(GetStatsRequest) returns (GetStatsResponse);
+  rpc ClearIndex(ClearIndexRequest) returns (ClearIndexResponse);
 }
 
 message IndexDocumentRequest {
@@ -77,4 +78,14 @@ message GetStatsResponse {
   int64 total_documents = 1;
   int64 total_terms = 2;
   double avg_document_length = 3;
+}
+
+message ClearIndexRequest {
+  string index_name = 1;
+}
+
+message ClearIndexResponse {
+  bool success = 1;
+  string message = 2;
+  int32 cleared_count = 3;
 }
