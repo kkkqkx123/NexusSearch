@@ -16,14 +16,6 @@ pub fn init_metrics() {
         "bm25_index_documents_total",
         "Total number of indexed documents"
     );
-    metrics::describe_counter!(
-        "bm25_cache_hits",
-        "Total number of cache hits"
-    );
-    metrics::describe_counter!(
-        "bm25_cache_misses",
-        "Total number of cache misses"
-    );
     metrics::describe_histogram!(
         "bm25_search_duration_seconds",
         "Search request duration"

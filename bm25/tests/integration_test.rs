@@ -9,7 +9,6 @@ use bm25_service::index::{
     delete::delete_document,
     search::{search, SearchOptions},
     persistence::PersistenceManager,
-    cache::Cache,
     stats::get_stats,
 };
 use std::collections::HashMap;
@@ -172,56 +171,6 @@ fn test_search_with_update_and_delete() {
     let (results, _) = search(&manager, &schema, "Programming", &options)
         .expect("Failed to search after delete");
     assert_eq!(results.len(), 0, "Should find 0 documents after delete");
-}
-
-#[test]
-fn test_cache_with_document_operations() {
-    let temp_dir = TempDir::new().expect("Failed to create temp directory");
-    let index_path = temp_dir.path().join("test_index");
-
-    let manager = IndexManager::create(&index_path)
-        .expect("Failed to create index manager");
-    let schema = IndexSchema::new();
-
-    // 创建缓存
-    let mut cache: Cache<String, String> = Cache::new(10, 60);
-
-    // 添加文档并缓存
-    let mut fields = HashMap::new();
-    fields.insert("title".to_string(), "Cached Document".to_string());
-    fields.insert("content".to_string(), "Content to cache".to_string());
-
-    add_document(&manager, &schema, "doc1", &fields)
-        .expect("Failed to add document");
-
-    // 缓存文档 ID
-    cache.insert("doc1".to_string(), "cached_content".to_string());
-
-    // 从缓存获取
-    let cached = cache.get(&"doc1".to_string());
-    assert_eq!(cached, Some("cached_content".to_string()));
-
-    // 更新文档
-    let mut updated_fields = HashMap::new();
-    updated_fields.insert("title".to_string(), "Updated Cached Document".to_string());
-    updated_fields.insert("content".to_string(), "Updated content".to_string());
-
-    update_document(&manager, &schema, "doc1", &updated_fields)
-        .expect("Failed to update document");
-
-    // 更新缓存
-    cache.insert("doc1".to_string(), "updated_cached_content".to_string());
-
-    let cached = cache.get(&"doc1".to_string());
-    assert_eq!(cached, Some("updated_cached_content".to_string()));
-
-    // 删除文档和缓存
-    delete_document(&manager, &schema, "doc1")
-        .expect("Failed to delete document");
-    cache.remove(&"doc1".to_string());
-
-    let cached = cache.get(&"doc1".to_string());
-    assert_eq!(cached, None);
 }
 
 #[test]

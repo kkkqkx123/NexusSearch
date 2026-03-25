@@ -4,7 +4,6 @@ mod test_module {
     use std::fs;
     use tempfile::{tempdir, TempDir};
 
-    use crate::index::cache::Cache;
     use crate::index::manager::IndexManager;
     use crate::index::schema::IndexSchema;
     use crate::index::search::{search, SearchOptions};
@@ -25,69 +24,6 @@ mod test_module {
         let schema = IndexSchema::new();
         
         (temp_dir, manager, schema)
-    }
-
-    #[test]
-    fn test_cache_basic_operations() {
-        let mut cache: Cache<String, i32> = Cache::new(10, 60);
-
-        assert_eq!(cache.get(&"key1".to_string()), None);
-        assert_eq!(cache.size(), 0);
-
-        cache.insert("key1".to_string(), 42);
-        assert_eq!(cache.get(&"key1".to_string()), Some(42));
-        assert_eq!(cache.size(), 1);
-
-        cache.insert("key1".to_string(), 100);
-        assert_eq!(cache.get(&"key1".to_string()), Some(100));
-
-        cache.remove(&"key1".to_string());
-        assert_eq!(cache.get(&"key1".to_string()), None);
-        assert_eq!(cache.size(), 0);
-    }
-
-    #[test]
-    fn test_cache_lru_eviction() {
-        let mut cache: Cache<String, i32> = Cache::new(3, 60);
-
-        cache.insert("key1".to_string(), 1);
-        cache.insert("key2".to_string(), 2);
-        cache.insert("key3".to_string(), 3);
-
-        assert_eq!(cache.size(), 3);
-
-        cache.insert("key4".to_string(), 4);
-
-        assert!(cache.size() <= 3);
-    }
-
-    #[test]
-    fn test_cache_stats() {
-        let mut cache: Cache<String, i32> = Cache::new(10, 60);
-
-        cache.insert("key1".to_string(), 1);
-        cache.get(&"key1".to_string());
-        cache.get(&"nonexistent".to_string());
-
-        let stats = cache.stats();
-        assert_eq!(stats.hits, 1);
-        assert_eq!(stats.misses, 1);
-        assert_eq!(stats.size, 1);
-    }
-
-    #[test]
-    fn test_cache_clear() {
-        let mut cache: Cache<String, i32> = Cache::new(10, 60);
-
-        cache.insert("key1".to_string(), 1);
-        cache.insert("key2".to_string(), 2);
-
-        assert_eq!(cache.size(), 2);
-
-        cache.clear();
-
-        assert_eq!(cache.size(), 0);
-        assert_eq!(cache.get(&"key1".to_string()), None);
     }
 
     #[test]
@@ -332,16 +268,6 @@ mod test_module {
         assert_eq!(options.offset, 0);
         assert!(!options.highlight);
         assert!(options.field_weights.is_empty());
-    }
-
-    #[test]
-    fn test_cache_stats_default() {
-        let stats = crate::index::cache::CacheStats::default();
-
-        assert_eq!(stats.hits, 0);
-        assert_eq!(stats.misses, 0);
-        assert_eq!(stats.evictions, 0);
-        assert_eq!(stats.size, 0);
     }
 
     #[test]

@@ -8,7 +8,6 @@ pub struct Config {
     pub server: ServerConfig,
     pub redis: RedisConfig,
     pub index: IndexConfig,
-    pub cache: CacheConfig,
     pub bm25: Bm25Config,
     pub search: SearchConfig,
 }
@@ -28,13 +27,6 @@ pub struct RedisConfig {
 pub struct IndexConfig {
     pub data_dir: String,
     pub index_path: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CacheConfig {
-    pub enabled: bool,
-    pub ttl_seconds: u64,
-    pub max_size: usize,
 }
 
 impl Config {
@@ -97,11 +89,6 @@ impl Config {
                 data_dir,
                 index_path,
             },
-            cache: CacheConfig {
-                enabled: true,
-                ttl_seconds: 3600,
-                max_size: 10000,
-            },
             bm25: bm25_config,
             search: search_config,
         })
@@ -122,11 +109,6 @@ impl Default for Config {
             index: IndexConfig {
                 data_dir: "./data".to_string(),
                 index_path: "./index".to_string(),
-            },
-            cache: CacheConfig {
-                enabled: true,
-                ttl_seconds: 3600,
-                max_size: 10000,
             },
             bm25: Bm25Config::default(),
             search: SearchConfig::default(),

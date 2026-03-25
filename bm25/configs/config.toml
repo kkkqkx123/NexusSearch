@@ -9,11 +9,6 @@ pool_size = 10
 data_dir = "./data"
 index_path = "./index"
 
-[cache]
-enabled = true
-ttl_seconds = 3600
-max_size = 10000
-
 [bm25]
 k1 = 1.2
 b = 0.75

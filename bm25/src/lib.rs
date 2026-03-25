@@ -14,7 +14,7 @@ pub use index::{IndexManager, IndexSchema};
 
 // Re-export service API (only available in service mode)
 #[cfg(feature = "service")]
-pub use service::{Config, ServerConfig, RedisConfig, IndexConfig, CacheConfig};
+pub use service::{Config, ServerConfig, RedisConfig, IndexConfig};
 
 #[cfg(feature = "service")]
 pub use service::{init_logging, init_metrics};
