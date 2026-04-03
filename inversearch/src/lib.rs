@@ -124,8 +124,23 @@ pub use search::{
     MultiFieldSearchConfig,
 };
 pub use serialize::*;
-pub use storage::{StorageInterface, StorageInfo, MemoryStorage, FileStorage, WALStorage};
-pub use storage::wal::{WALManager, WALConfig, IndexChange};
+pub use storage::{StorageInterface, StorageInfo};
+
+#[cfg(feature = "store-memory")]
+pub use storage::MemoryStorage;
+
+#[cfg(feature = "store-file")]
+pub use storage::FileStorage;
+
+#[cfg(feature = "store-wal")]
+pub use storage::WALStorage;
+
+#[cfg(feature = "store-wal")]
+pub use storage::wal::{WALManager, IndexChange};
+
+#[cfg(feature = "store-wal")]
+pub use config::WALConfig as StorageWALConfig;
+
 pub use tokenizer::*;
 pub use async_::*;
 // Export specific types from r#type module to avoid conflicts

@@ -19,16 +19,113 @@ use crate::{
 };
 
 // Import storage module
-use crate::storage::{StorageInterface, MemoryStorage};
+use crate::storage::StorageInterface;
+
+#[cfg(feature = "store-memory")]
+use crate::storage::MemoryStorage;
+
+#[cfg(feature = "store-file")]
+use crate::storage::FileStorage;
+
+#[cfg(feature = "store-redis")]
+use crate::storage::redis::{RedisStorage, RedisStorageConfig};
+
+#[cfg(feature = "store-wal")]
+use crate::storage::WALStorage;
+
+// Import config
+use crate::config::{Config, StorageBackend};
+
+#[cfg(feature = "store-wal")]
+use crate::storage::wal::WALConfig;
 
 // Import index module's IndexOptions
 use crate::index::IndexOptions;
+
+/// Create storage based on configuration
+pub async fn create_storage_from_config(config: &Config) -> Arc<RwLock<dyn StorageInterface + Send + Sync>> {
+    if !config.storage.enabled {
+        #[cfg(feature = "store-memory")]
+        {
+            return Arc::new(RwLock::new(MemoryStorage::new()));
+        }
+        #[cfg(not(feature = "store-memory"))]
+        {
+            panic!("Storage is disabled but no storage backend is available. Enable at least one storage feature (store-memory, store-file, store-redis, or store-wal)");
+        }
+    }
+
+    match &config.storage.backend {
+        #[cfg(feature = "store-memory")]
+        StorageBackend::Memory => {
+            Arc::new(RwLock::new(MemoryStorage::new()))
+        }
+        #[cfg(feature = "store-file")]
+        StorageBackend::File => {
+            let file_config = config.storage.file.as_ref()
+                .map(|c| c.base_path.clone())
+                .unwrap_or_else(|| "./data".to_string());
+            Arc::new(RwLock::new(FileStorage::new(file_config)))
+        }
+        #[cfg(feature = "store-redis")]
+        StorageBackend::Redis => {
+            let redis_config = config.storage.redis.as_ref()
+                .map(|c| RedisStorageConfig {
+                    url: c.url.clone(),
+                    pool_size: c.pool_size,
+                    ..Default::default()
+                })
+                .unwrap_or_default();
+            match RedisStorage::new(redis_config).await {
+                Ok(storage) => Arc::new(RwLock::new(storage)),
+                Err(e) => {
+                    eprintln!("Failed to connect to Redis: {}, falling back to memory storage", e);
+                    #[cfg(feature = "store-memory")]
+                    {
+                        Arc::new(RwLock::new(MemoryStorage::new()))
+                    }
+                    #[cfg(not(feature = "store-memory"))]
+                    {
+                        panic!("Redis connection failed and no fallback storage available");
+                    }
+                }
+            }
+        }
+        #[cfg(feature = "store-wal")]
+        StorageBackend::Wal => {
+            let wal_config = config.storage.wal.as_ref()
+                .map(|c| WALConfig {
+                    base_path: std::path::PathBuf::from(&c.base_path),
+                    max_wal_size: c.max_wal_size,
+                    compression: c.compression,
+                    snapshot_interval: c.snapshot_interval,
+                    ..Default::default()
+                })
+                .unwrap_or_default();
+            match WALStorage::new(wal_config).await {
+                Ok(storage) => Arc::new(RwLock::new(storage)),
+                Err(e) => {
+                    eprintln!("Failed to initialize WAL storage: {}, falling back to memory storage", e);
+                    #[cfg(feature = "store-memory")]
+                    {
+                        Arc::new(RwLock::new(MemoryStorage::new()))
+                    }
+                    #[cfg(not(feature = "store-memory"))]
+                    {
+                        panic!("WAL initialization failed and no fallback storage available");
+                    }
+                }
+            }
+        }
+    }
+}
 
 /// Inversearch gRPC service implementation
 pub struct InversearchService {
     index: Arc<RwLock<Index>>,
     #[allow(dead_code)]
     storage: Arc<RwLock<dyn StorageInterface + Send + Sync>>,
+    config: Config,
 }
 
 impl Default for InversearchService {
@@ -38,16 +135,43 @@ impl Default for InversearchService {
 }
 
 impl InversearchService {
-    /// Create a new service instance
+    /// Create a new service instance with default configuration
     pub fn new() -> Self {
+        let config = Config::default();
+        Self::with_config(config)
+    }
+
+    /// Create a new service instance with custom configuration
+    pub async fn with_config_async(config: Config) -> Self {
         let index = Index::new(IndexOptions::default()).expect("Failed to create index");
         let index = Arc::new(RwLock::new(index));
-        let storage: Arc<RwLock<dyn StorageInterface + Send + Sync>> =
-            Arc::new(RwLock::new(MemoryStorage::new()));
+        let storage = create_storage_from_config(&config).await;
 
         Self {
             index,
             storage,
+            config,
+        }
+    }
+
+    /// Create a new service instance with custom configuration (sync version)
+    pub fn with_config(config: Config) -> Self {
+        let index = Index::new(IndexOptions::default()).expect("Failed to create index");
+        let index = Arc::new(RwLock::new(index));
+        
+        #[cfg(feature = "store-memory")]
+        let storage: Arc<RwLock<dyn StorageInterface + Send + Sync>> =
+            Arc::new(RwLock::new(MemoryStorage::new()));
+        
+        #[cfg(not(feature = "store-memory"))]
+        let storage: Arc<RwLock<dyn StorageInterface + Send + Sync>> = {
+            panic!("No storage backend available. Enable at least one storage feature (store-memory, store-file, store-redis, or store-wal)");
+        };
+
+        Self {
+            index,
+            storage,
+            config,
         }
     }
 
@@ -60,7 +184,26 @@ impl InversearchService {
         Self {
             index,
             storage,
+            config: Config::default(),
         }
+    }
+
+    /// Create a new service instance with custom storage and config
+    pub fn with_storage_and_config<S: StorageInterface + Send + Sync + 'static>(storage: S, config: Config) -> Self {
+        let index = Index::new(IndexOptions::default()).expect("Failed to create index");
+        let index = Arc::new(RwLock::new(index));
+        let storage = Arc::new(RwLock::new(storage));
+
+        Self {
+            index,
+            storage,
+            config,
+        }
+    }
+
+    /// Get the current configuration
+    pub fn config(&self) -> &Config {
+        &self.config
     }
 }
 

@@ -1,6 +1,13 @@
 //! 存储接口模块
 //!
 //! 提供持久化存储的抽象接口和实现
+//!
+//! ## 条件编译特性
+//!
+//! - `store-memory`: 内存存储（默认启用）
+//! - `store-file`: 文件存储
+//! - `store-redis`: Redis 存储
+//! - `store-wal`: WAL 预写日志存储
 
 use crate::r#type::{SearchResults, EnrichedSearchResults, DocId};
 use crate::error::Result;
@@ -9,9 +16,14 @@ use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Instant;
+
+#[cfg(any(feature = "store-file", feature = "store-wal"))]
 use std::path::PathBuf;
 
+#[cfg(feature = "store-redis")]
 pub mod redis;
+
+#[cfg(feature = "store-wal")]
 pub mod wal;
 
 /// 存储接口 - 类似JavaScript版本的StorageInterface
@@ -62,7 +74,7 @@ pub struct StorageInfo {
     pub is_connected: bool,
 }
 
-/// 内存存储实现 - 用于测试和开发
+#[cfg(feature = "store-memory")]
 pub struct MemoryStorage {
     data: HashMap<String, Vec<DocId>>,
     context_data: HashMap<String, HashMap<String, Vec<DocId>>>,
@@ -73,6 +85,7 @@ pub struct MemoryStorage {
     total_latency: AtomicUsize,
 }
 
+#[cfg(feature = "store-memory")]
 impl MemoryStorage {
     /// 创建新的内存存储
     pub fn new() -> Self {
@@ -152,13 +165,14 @@ impl MemoryStorage {
     }
 }
 
+#[cfg(feature = "store-memory")]
 impl Default for MemoryStorage {
     fn default() -> Self {
         Self::new()
     }
 }
 
-/// 内存存储性能指标
+#[cfg(feature = "store-memory")]
 #[derive(Debug, Clone)]
 pub struct MemoryStorageMetrics {
     pub operation_count: usize,
@@ -167,6 +181,7 @@ pub struct MemoryStorageMetrics {
     pub error_count: usize,
 }
 
+#[cfg(feature = "store-memory")]
 #[async_trait::async_trait]
 impl StorageInterface for MemoryStorage {
     async fn mount(&mut self, _index: &Index) -> Result<()> {
@@ -317,7 +332,7 @@ impl StorageInterface for MemoryStorage {
     }
 }
 
-/// 文件存储实现
+#[cfg(feature = "store-file")]
 pub struct FileStorage {
     base_path: PathBuf,
     data: HashMap<String, Vec<DocId>>,
@@ -329,6 +344,7 @@ pub struct FileStorage {
     is_open: bool,
 }
 
+#[cfg(feature = "store-file")]
 impl FileStorage {
     /// 创建新的文件存储
     pub fn new(base_path: impl Into<PathBuf>) -> Self {
@@ -472,6 +488,7 @@ impl FileStorage {
     }
 }
 
+#[cfg(feature = "store-file")]
 #[async_trait::async_trait]
 impl StorageInterface for FileStorage {
     async fn mount(&mut self, _index: &Index) -> Result<()> {
@@ -647,7 +664,7 @@ fn apply_limit_offset(results: &[DocId], limit: usize, offset: usize) -> SearchR
     results[start..end].to_vec()
 }
 
-/// 文件存储数据结构
+#[cfg(feature = "store-file")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FileStorageData {
     pub version: String,
@@ -657,7 +674,7 @@ pub struct FileStorageData {
     pub documents: HashMap<DocId, String>,
 }
 
-/// 文件存储性能指标
+#[cfg(feature = "store-file")]
 #[derive(Debug, Clone)]
 pub struct FileStorageMetrics {
     pub operation_count: usize,
@@ -1019,13 +1036,14 @@ impl BatchOperationProcessor {
     }
 }
 
-/// WAL 存储实现 - 支持增量持久化
+#[cfg(feature = "store-wal")]
 pub struct WALStorage {
     wal_manager: wal::WALManager,
     documents: HashMap<DocId, String>,
     is_open: bool,
 }
 
+#[cfg(feature = "store-wal")]
 impl WALStorage {
     /// 创建新的 WAL 存储
     pub async fn new(config: wal::WALConfig) -> Result<Self> {
@@ -1044,6 +1062,7 @@ impl WALStorage {
     }
 }
 
+#[cfg(feature = "store-wal")]
 #[async_trait::async_trait]
 impl StorageInterface for WALStorage {
     async fn mount(&mut self, _index: &Index) -> Result<()> {
