@@ -1,6 +1,6 @@
+use crate::r#type::EncoderOptions;
 use crate::encoder::Encoder;
 use crate::error::Result;
-use crate::r#type::EncoderOptions;
 
 pub struct Tokenizer {
     pub encoder: Encoder,
@@ -101,11 +101,15 @@ impl Tokenizer {
 
     pub fn tokenize_with_positions(&self, text: &str) -> Vec<(String, usize)> {
         let tokens = self.encoder.encode(text).unwrap_or_default();
-        tokens
-            .into_iter()
-            .enumerate()
-            .map(|(pos, token)| (token, pos))
-            .collect()
+        let mut result = Vec::new();
+        let mut position = 0;
+
+        for token in &tokens {
+            result.push((token.clone(), position));
+            position += 1;
+        }
+
+        result
     }
 
     pub fn tokenize_with_offsets(&self, text: &str) -> Vec<(String, usize, usize)> {
@@ -126,8 +130,7 @@ impl Tokenizer {
 
 impl Default for Tokenizer {
     fn default() -> Self {
-        Tokenizer::new(EncoderOptions::default())
-            .expect("Default tokenizer creation should succeed")
+        Tokenizer::new(EncoderOptions::default()).expect("Default tokenizer creation should succeed")
     }
 }
 
