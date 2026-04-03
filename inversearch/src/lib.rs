@@ -14,7 +14,7 @@ pub mod resolver;
 pub mod search;
 pub mod serialize;
 pub mod storage;
-pub mod tokenizer;
+
 pub mod r#type;
 pub mod async_;
 
@@ -142,7 +142,7 @@ pub use storage::wal::{WALManager, IndexChange};
 #[cfg(feature = "store-wal")]
 pub use config::WALConfig as StorageWALConfig;
 
-pub use tokenizer::*;
+
 pub use async_::*;
 // Export specific types from r#type module to avoid conflicts
 pub use r#type::{

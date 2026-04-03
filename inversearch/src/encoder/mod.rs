@@ -1,8 +1,10 @@
 mod transform;
 mod validator;
+pub mod tokenizer;
 
 pub use transform::*;
 pub use validator::EncoderValidator;
+pub use tokenizer::{Tokenizer, TokenizerMode};
 
 use crate::r#type::EncoderOptions;
 use crate::error::Result;
