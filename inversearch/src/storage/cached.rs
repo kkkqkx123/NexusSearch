@@ -7,7 +7,7 @@ use crate::r#type::{SearchResults, EnrichedSearchResults, DocId};
 use crate::error::Result;
 use crate::Index;
 use crate::storage::common::{StorageInterface, StorageInfo, FileStorageData};
-use crate::storage::common::io::{save_to_file, load_from_file, atomic_write, remove_file_safe};
+use crate::storage::common::io::{load_from_file, atomic_write, remove_file_safe};
 use crate::storage::base::StorageBase;
 use std::path::PathBuf;
 use std::time::Instant;

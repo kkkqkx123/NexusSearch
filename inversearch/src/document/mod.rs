@@ -11,7 +11,7 @@
 //! - `batch.rs`: 批量操作
 
 mod field;
-mod tree;
+pub mod tree;
 mod tag;
 mod batch;
 

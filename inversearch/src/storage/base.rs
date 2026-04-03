@@ -4,7 +4,7 @@
 
 use crate::r#type::{SearchResults, EnrichedSearchResults, DocId};
 use crate::Index;
-use crate::storage::common::metrics::MetricsCollector;
+
 use crate::storage::utils::apply_limit_offset;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering};

@@ -108,10 +108,18 @@ pub async fn create_storage_from_config(config: &Config) -> Arc<RwLock<dyn Stora
                 }
             }
         }
+        #[cfg(not(any(
+            feature = "store-memory",
+            feature = "store-file",
+            feature = "store-redis",
+            feature = "store-wal"
+        )))]
         _ => {
             // 默认使用缓存存储
             #[cfg(feature = "store-cached")]
-            return Arc::new(RwLock::new(CachedStorage::new()));
+            {
+                return Arc::new(RwLock::new(CachedStorage::new()));
+            }
             #[cfg(not(feature = "store-cached"))]
             panic!("No storage backend enabled");
         }
@@ -288,17 +296,19 @@ impl InversearchServiceTrait for InversearchService {
 
         match result {
             Ok(search_result) => {
-                let results: Vec<u64> = search_result.results.iter().copied().collect();
+                let results: Vec<u64> = search_result.results.to_vec();
                 Ok(Response::new(SearchResponse {
                     results,
                     total: search_result.total as u32,
                     error: String::new(),
+                    highlights: vec![],
                 }))
             }
             Err(e) => Ok(Response::new(SearchResponse {
                 results: vec![],
                 total: 0,
                 error: e.to_string(),
+                highlights: vec![],
             })),
         }
     }

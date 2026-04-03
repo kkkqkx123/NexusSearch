@@ -77,6 +77,8 @@ pub use error::*;
 // Export highlight modules with specific names to avoid conflicts
 pub use highlight::{
     highlight_fields, highlight_document, highlight_single_document,
+    highlight_document_structured, highlight_single_document_structured,
+    highlight_results, highlight_results_with_complete,
     HighlightProcessor
 };
 pub use index::*;

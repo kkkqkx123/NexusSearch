@@ -123,6 +123,8 @@ async fn test_grpc_search() {
         resolve: true,
         enrich: false,
         cache: false,
+        highlight: false,
+        highlight_options: None,
     });
 
     let response = InversearchServiceTrait::search(&service, search_request).await.unwrap();
@@ -169,6 +171,8 @@ async fn test_grpc_search_empty_query() {
         resolve: true,
         enrich: false,
         cache: false,
+        highlight: false,
+        highlight_options: None,
     });
 
     let response = InversearchServiceTrait::search(&service, search_request).await;
@@ -191,6 +195,8 @@ async fn test_grpc_search_nonexistent() {
         resolve: true,
         enrich: false,
         cache: false,
+        highlight: false,
+        highlight_options: None,
     });
 
     let response = InversearchServiceTrait::search(&service, search_request).await.unwrap();
