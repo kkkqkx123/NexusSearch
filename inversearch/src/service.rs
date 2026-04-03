@@ -19,7 +19,7 @@ use crate::{
 };
 
 // Import storage module
-use crate::storage::interface::StorageInterface;
+use crate::storage::common::r#trait::StorageInterface;
 
 #[cfg(feature = "store-memory")]
 use crate::storage::memory::MemoryStorage;

@@ -5,8 +5,7 @@
 use crate::r#type::{SearchResults, EnrichedSearchResults, DocId};
 use crate::error::Result;
 use crate::Index;
-use crate::storage::interface::StorageInterface;
-use crate::storage::types::StorageInfo;
+use crate::storage::common::{StorageInterface, StorageInfo};
 use crate::storage::wal::{WALManager, WALConfig, IndexChange};
 use std::collections::HashMap;
 

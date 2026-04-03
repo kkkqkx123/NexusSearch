@@ -124,8 +124,8 @@ pub use search::{
     MultiFieldSearchConfig,
 };
 pub use serialize::*;
-pub use storage::interface::StorageInterface;
-pub use storage::types::StorageInfo;
+pub use storage::common::r#trait::StorageInterface;
+pub use storage::common::types::StorageInfo;
 
 #[cfg(feature = "store-memory")]
 pub use storage::memory::MemoryStorage;
