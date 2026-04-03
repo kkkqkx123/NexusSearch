@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Config {
     pub server: ServerConfig,
     pub index: IndexConfig,
@@ -177,18 +177,6 @@ impl Default for LoggingConfig {
     }
 }
 
-impl Default for Config {
-    fn default() -> Self {
-        Config {
-            server: ServerConfig::default(),
-            index: IndexConfig::default(),
-            cache: CacheConfig::default(),
-            storage: StorageConfig::default(),
-            logging: LoggingConfig::default(),
-        }
-    }
-}
-
 impl Config {
     pub fn from_file(path: &str) -> anyhow::Result<Self> {
         let content = std::fs::read_to_string(path)?;
@@ -272,14 +260,14 @@ mod tests {
     #[test]
     fn test_cache_config_default() {
         let config = CacheConfig::default();
-        assert_eq!(config.enabled, false);
+        assert!(!config.enabled);
         assert_eq!(config.size, 1000);
     }
 
     #[test]
     fn test_storage_config_default() {
         let config = StorageConfig::default();
-        assert_eq!(config.enabled, false);
+        assert!(!config.enabled);
         assert!(matches!(config.backend, StorageBackend::Memory));
     }
 

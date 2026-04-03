@@ -701,7 +701,6 @@ pub fn fallback_encoder(str: &str) -> Vec<String> {
     use unicode_normalization::UnicodeNormalization;
     NORMALIZE.replace_all(str.chars().nfkd().collect::<String>().as_str(), "")
         .to_lowercase()
-        .trim()
         .split_whitespace()
         .map(|s| s.to_string())
         .collect()

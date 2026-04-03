@@ -144,13 +144,13 @@ fn apply_boundary_simple(
 
     if boundary_before > 0 || boundary_after > 0 || (text.len() - markup_length) > boundary_total {
         let start = if boundary_before > 0 {
-            first_match_pos - boundary_before as i32
+            first_match_pos - boundary_before
         } else {
             first_match_pos - ((boundary_length - length) / 2)
         };
 
         let end = if boundary_after > 0 {
-            last_match_pos + boundary_after as i32
+            last_match_pos + boundary_after
         } else {
             start + boundary_length
         };

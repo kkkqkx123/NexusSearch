@@ -164,9 +164,9 @@ impl Index {
                 let kw_hash = self.keystore_hash_str(&kw_key);
                 let doc_ids_vec = self.ctx.index
                     .entry(kw_hash)
-                    .or_insert_with(HashMap::new)
+                    .or_default()
                     .entry(term_key.clone())
-                    .or_insert_with(Vec::new);
+                    .or_default();
 
                 if !append || !doc_ids_vec.contains(&id) {
                     doc_ids_vec.push(id);
@@ -178,9 +178,9 @@ impl Index {
 
                             reg.index
                                 .entry(id_hash)
-                                .or_insert_with(HashMap::new)
+                                .or_default()
                                 .entry(id)
-                                .or_insert_with(Vec::new)
+                                .or_default()
                                 .push(index_ref);
                         }
                     }
@@ -189,9 +189,9 @@ impl Index {
                 let term_hash = self.keystore_hash_str(&term_key);
                 let doc_ids_vec = self.map.index
                     .entry(term_hash)
-                    .or_insert_with(HashMap::new)
+                    .or_default()
                     .entry(term_key.clone())
-                    .or_insert_with(Vec::new);
+                    .or_default();
 
                 if !append || !doc_ids_vec.contains(&id) {
                     doc_ids_vec.push(id);

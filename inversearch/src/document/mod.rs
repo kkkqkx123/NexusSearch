@@ -37,6 +37,8 @@ use crate::{
 use serde_json::Value;
 use std::collections::HashMap;
 
+type TagFilterFn = Box<dyn Fn(&Value) -> bool + Send + Sync>;
+
 /// 文档搜索引擎主结构
 pub struct Document {
     fields: Vec<Field>,
@@ -339,7 +341,7 @@ impl Document {
 #[derive(Default)]
 pub struct DocumentConfig {
     pub fields: Vec<FieldConfig>,
-    pub tags: Vec<(String, Option<Box<dyn Fn(&Value) -> bool + Send + Sync>>)>,
+    pub tags: Vec<(String, Option<TagFilterFn>)>,
     pub store: bool,
     pub fastupdate: bool,
     pub cache: Option<usize>,

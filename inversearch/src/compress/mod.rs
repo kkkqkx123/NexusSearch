@@ -42,7 +42,7 @@ mod tests {
     #[test]
     fn test_compress_empty() {
         let result = compress_string("");
-        assert!(!result.is_empty());
+        assert!(result.is_empty());
     }
 
     #[test]

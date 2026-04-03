@@ -74,7 +74,7 @@ fn test_single_character_query() {
 
     // 搜索单个字符
     let options = basic_search_options("a");
-    let result = search(&index, &options).unwrap();
+    let _result = search(&index, &options).unwrap();
 
     // 取决于最小词长配置
     // 可能返回结果或空

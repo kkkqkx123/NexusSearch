@@ -141,6 +141,7 @@ pub enum MetadataSource {
 }
 
 /// 文档丰富化器
+#[derive(Default)]
 pub struct Enricher {
     field_selectors: Vec<FieldSelector>,
     tag_configs: Vec<TagIntegrationConfig>,
@@ -180,7 +181,7 @@ impl Enricher {
 
     pub fn apply_enrich(
         ids: &SearchResults,
-        documents: &Vec<Option<Value>>,
+        documents: &[Option<Value>],
     ) -> EnrichedSearchResults {
         if ids.is_empty() {
             return Vec::new();
@@ -202,7 +203,7 @@ impl Enricher {
 
     pub fn enrich_with_metadata(
         ids: &SearchResults,
-        documents: &Vec<Option<Value>>,
+        documents: &[Option<Value>],
         metadata: &HashMap<u64, Value>,
     ) -> EnrichedSearchResults {
         if ids.is_empty() {
@@ -234,7 +235,7 @@ impl Enricher {
 
     pub fn enrich_with_scores(
         ids: &SearchResults,
-        documents: &Vec<Option<Value>>,
+        documents: &[Option<Value>],
         scores: &HashMap<u64, f64>,
     ) -> EnrichedSearchResults {
         if ids.is_empty() {
@@ -264,7 +265,7 @@ impl Enricher {
 
     pub fn apply_highlight(
         ids: &SearchResults,
-        documents: &Vec<Option<Value>>,
+        documents: &[Option<Value>],
         highlights: &HashMap<u64, HashMap<String, Vec<String>>>,
     ) -> EnrichedSearchResults {
         if ids.is_empty() {
@@ -302,7 +303,7 @@ impl Enricher {
 
     pub fn apply_field_selection(
         ids: &SearchResults,
-        documents: &Vec<Option<Value>>,
+        documents: &[Option<Value>],
         selectors: &[FieldSelector],
     ) -> EnrichedSearchResults {
         if ids.is_empty() {
@@ -352,7 +353,7 @@ impl Enricher {
 
     pub fn apply_tag_integration(
         ids: &SearchResults,
-        documents: &Vec<Option<Value>>,
+        documents: &[Option<Value>],
         tag_configs: &[TagIntegrationConfig],
         tag_data: &HashMap<u64, Vec<(String, Value)>>,
     ) -> EnrichedSearchResults {
@@ -399,7 +400,7 @@ impl Enricher {
 
     pub fn apply_metadata_enrichment(
         ids: &SearchResults,
-        documents: &Vec<Option<Value>>,
+        documents: &[Option<Value>],
         metadata_sources: &[MetadataSource],
         external_data: &HashMap<String, Value>,
     ) -> EnrichedSearchResults {

@@ -11,10 +11,8 @@ pub fn add_document(
 ) -> Result<()> {
     if content.is_empty() || id == 0 { return Ok(()) }
 
-    if !skip_update && !append {
-        if index.contains(id) {
-            return index.update(id, content);
-        }
+    if !skip_update && !append && index.contains(id) {
+        return index.update(id, content);
     }
 
     let depth = index.depth;

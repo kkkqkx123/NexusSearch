@@ -19,10 +19,7 @@ use crate::{
 };
 
 // Import storage module
-use crate::storage::StorageInterface;
-
-#[cfg(feature = "store-memory")]
-use crate::storage::MemoryStorage;
+use crate::storage::{StorageInterface, MemoryStorage};
 
 #[cfg(feature = "store-file")]
 use crate::storage::FileStorage;
@@ -45,18 +42,10 @@ use crate::index::IndexOptions;
 /// Create storage based on configuration
 pub async fn create_storage_from_config(config: &Config) -> Arc<RwLock<dyn StorageInterface + Send + Sync>> {
     if !config.storage.enabled {
-        #[cfg(feature = "store-memory")]
-        {
-            return Arc::new(RwLock::new(MemoryStorage::new()));
-        }
-        #[cfg(not(feature = "store-memory"))]
-        {
-            panic!("Storage is disabled but no storage backend is available. Enable at least one storage feature (store-memory, store-file, store-redis, or store-wal)");
-        }
+        return Arc::new(RwLock::new(MemoryStorage::new()));
     }
 
     match &config.storage.backend {
-        #[cfg(feature = "store-memory")]
         StorageBackend::Memory => {
             Arc::new(RwLock::new(MemoryStorage::new()))
         }
@@ -80,14 +69,7 @@ pub async fn create_storage_from_config(config: &Config) -> Arc<RwLock<dyn Stora
                 Ok(storage) => Arc::new(RwLock::new(storage)),
                 Err(e) => {
                     eprintln!("Failed to connect to Redis: {}, falling back to memory storage", e);
-                    #[cfg(feature = "store-memory")]
-                    {
-                        Arc::new(RwLock::new(MemoryStorage::new()))
-                    }
-                    #[cfg(not(feature = "store-memory"))]
-                    {
-                        panic!("Redis connection failed and no fallback storage available");
-                    }
+                    Arc::new(RwLock::new(MemoryStorage::new()))
                 }
             }
         }
@@ -106,14 +88,7 @@ pub async fn create_storage_from_config(config: &Config) -> Arc<RwLock<dyn Stora
                 Ok(storage) => Arc::new(RwLock::new(storage)),
                 Err(e) => {
                     eprintln!("Failed to initialize WAL storage: {}, falling back to memory storage", e);
-                    #[cfg(feature = "store-memory")]
-                    {
-                        Arc::new(RwLock::new(MemoryStorage::new()))
-                    }
-                    #[cfg(not(feature = "store-memory"))]
-                    {
-                        panic!("WAL initialization failed and no fallback storage available");
-                    }
+                    Arc::new(RwLock::new(MemoryStorage::new()))
                 }
             }
         }
@@ -159,14 +134,8 @@ impl InversearchService {
         let index = Index::new(IndexOptions::default()).expect("Failed to create index");
         let index = Arc::new(RwLock::new(index));
         
-        #[cfg(feature = "store-memory")]
         let storage: Arc<RwLock<dyn StorageInterface + Send + Sync>> =
             Arc::new(RwLock::new(MemoryStorage::new()));
-        
-        #[cfg(not(feature = "store-memory"))]
-        let storage: Arc<RwLock<dyn StorageInterface + Send + Sync>> = {
-            panic!("No storage backend available. Enable at least one storage feature (store-memory, store-file, store-redis, or store-wal)");
-        };
 
         Self {
             index,
@@ -275,22 +244,24 @@ impl InversearchServiceTrait for InversearchService {
         let index = self.index.read().await;
 
         // Build search options
-        let mut search_opts = SearchOptions::default();
-        search_opts.query = Some(req.query);
-        search_opts.limit = Some(req.limit as usize);
-        search_opts.offset = Some(req.offset as usize);
-        search_opts.context = Some(req.context);
-        search_opts.suggest = Some(req.suggest);
-        search_opts.resolve = Some(req.resolve);
-        search_opts.enrich = Some(req.enrich);
-        search_opts.cache = Some(req.cache);
+        let search_opts = SearchOptions {
+            query: Some(req.query),
+            limit: Some(req.limit as usize),
+            offset: Some(req.offset as usize),
+            context: Some(req.context),
+            suggest: Some(req.suggest),
+            resolve: Some(req.resolve),
+            enrich: Some(req.enrich),
+            cache: Some(req.cache),
+            ..Default::default()
+        };
 
         // Perform search
         let result = index.search(&search_opts);
 
         match result {
             Ok(search_result) => {
-                let results: Vec<u64> = search_result.results.iter().map(|&id| id as u64).collect();
+                let results: Vec<u64> = search_result.results.iter().copied().collect();
                 Ok(Response::new(SearchResponse {
                     results,
                     total: search_result.total as u32,
@@ -397,7 +368,7 @@ mod tests {
 
     #[test]
     fn test_service_creation() {
-        let service = InversearchService::new();
+        let _service = InversearchService::new();
         // Service should be created successfully
     }
 }

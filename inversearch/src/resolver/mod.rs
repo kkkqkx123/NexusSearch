@@ -47,7 +47,7 @@ mod tests {
 
     #[test]
     fn test_resolver_chain_operations() {
-        let mut result: IntermediateSearchResults = vec![vec![1, 2, 3, 4, 5]];
+        let result: IntermediateSearchResults = vec![vec![1, 2, 3, 4, 5]];
         let mut resolver = Resolver::new(result, None);
         resolver.limit(3).offset(1).boost(5);
 
@@ -59,7 +59,8 @@ mod tests {
         let result: IntermediateSearchResults = vec![vec![1, 2, 3]];
         let other: IntermediateSearchResults = vec![vec![2, 3, 4]];
 
-        let mut resolver = Resolver::new(result, None);
+        let resolver = Resolver::new(result, None);
+        let mut resolver = resolver;
         resolver.and(other);
         let resolved = resolver.get();
 
@@ -75,11 +76,13 @@ mod tests {
 
     #[test]
     fn test_search_options_builder() {
-        let mut options = SearchOptions::default();
-        options.query = Some("test".to_string());
-        options.limit = Some(10);
-        options.offset = Some(5);
-        options.boost = Some(3);
+        let options = SearchOptions {
+            query: Some("test".to_string()),
+            limit: Some(10),
+            offset: Some(5),
+            boost: Some(3),
+            ..Default::default()
+        };
 
         assert_eq!(options.query, Some("test".to_string()));
         assert_eq!(options.limit, Some(10));
@@ -93,7 +96,7 @@ mod tests {
         let resolver = Resolver::new(result, None);
         let async_resolver = AsyncResolver::new(resolver);
 
-        assert_eq!(async_resolver.borrow().result.len(), 1);
+        assert_eq!(async_resolver.inner().result.len(), 1);
     }
 
     #[test]

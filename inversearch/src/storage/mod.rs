@@ -1157,6 +1157,7 @@ mod tests {
     use crate::Index;
 
     #[tokio::test]
+    #[cfg(feature = "store-memory")]
     async fn test_memory_storage() {
         let mut storage = MemoryStorage::new();
         storage.open().await.unwrap();
@@ -1189,6 +1190,7 @@ mod tests {
     }
     
     #[tokio::test]
+    #[cfg(feature = "store-file")]
     async fn test_file_storage() {
         use tempfile::TempDir;
         

@@ -31,19 +31,10 @@ impl From<crate::InversearchError> for ResolverError {
 
 pub type ResolverResult<T> = Result<T, ResolverError>;
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct ResolverOptions {
     pub options: TypeSearchOptions,
     pub index: Option<crate::Index>,
-}
-
-impl Default for ResolverOptions {
-    fn default() -> Self {
-        ResolverOptions {
-            options: TypeSearchOptions::default(),
-            index: None,
-        }
-    }
 }
 
 impl ResolverOptions {
@@ -118,36 +109,13 @@ impl ResolverOptions {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct Resolver {
     pub index: Option<crate::Index>,
     pub result: IntermediateSearchResults,
     pub boostval: i32,
     pub resolved: bool,
     pub options: Option<ResolverOptions>,
-}
-
-impl std::fmt::Debug for Resolver {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Resolver")
-            .field("index", &self.index.as_ref().map(|_| "Index"))
-            .field("result", &self.result)
-            .field("boostval", &self.boostval)
-            .field("resolved", &self.resolved)
-            .finish()
-    }
-}
-
-impl Default for Resolver {
-    fn default() -> Self {
-        Resolver {
-            index: None,
-            result: Vec::new(),
-            boostval: 0,
-            resolved: false,
-            options: None,
-        }
-    }
 }
 
 impl Resolver {

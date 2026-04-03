@@ -467,15 +467,21 @@ pub struct StorageMetrics {
     pub error_count: usize,
 }
 
-impl StorageMetrics {
-    /// 创建空的指标
-    pub fn new() -> Self {
+impl Default for StorageMetrics {
+    fn default() -> Self {
         Self {
             operation_count: 0,
             average_latency: 0,
             memory_usage: 0,
             error_count: 0,
         }
+    }
+}
+
+impl StorageMetrics {
+    /// 创建空的指标
+    pub fn new() -> Self {
+        Self::default()
     }
 
     /// 重置所有指标

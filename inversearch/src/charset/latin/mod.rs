@@ -65,11 +65,12 @@ pub fn soundex_encode(string_to_encode: &str) -> String {
     let mut encoded_string = first_char.to_string();
     let mut last = codes.get(&first_char.to_ascii_lowercase()).copied().unwrap_or(0);
     
-    for (_i, char) in string_to_encode.chars().enumerate().skip(1) {
+    for char in string_to_encode.chars().skip(1) {
         // Remove all occurrences of "h" and "w"
-        if char.to_ascii_lowercase() != 'h' && char.to_ascii_lowercase() != 'w' {
+        let char_lower = char.to_ascii_lowercase();
+        if char_lower != 'h' && char_lower != 'w' {
             // Replace all consonants with digits
-            let char_code = codes.get(&char.to_ascii_lowercase()).copied().unwrap_or(0);
+            let char_code = codes.get(&char_lower).copied().unwrap_or(0);
             
             // Remove all occurrences of a,e,i,o,u,y except first letter
             if char_code != 0 {

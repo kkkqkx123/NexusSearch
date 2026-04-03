@@ -26,22 +26,6 @@ pub fn create_english_index() -> Index {
     create_index_with_docs(super::documents::PROGRAMMING_DOCS)
 }
 
-/// 创建中文测试索引
-pub fn create_chinese_index() -> Index {
-    create_index_with_docs(super::documents::CHINESE_DOCS)
-}
-
-/// 创建 CJK 测试索引
-pub fn create_cjk_index() -> Index {
-    let all_cjk: Vec<_> = super::documents::CHINESE_DOCS
-        .iter()
-        .chain(super::documents::JAPANESE_DOCS)
-        .chain(super::documents::KOREAN_DOCS)
-        .copied()
-        .collect();
-    create_index_with_docs(&all_cjk)
-}
-
 /// 创建完整测试索引（包含所有文档）
 pub fn create_full_index() -> Index {
     let all_docs: Vec<_> = super::documents::PROGRAMMING_DOCS
@@ -53,15 +37,6 @@ pub fn create_full_index() -> Index {
         .copied()
         .collect();
     create_index_with_docs(&all_docs)
-}
-
-/// 创建带缓存的索引
-pub fn create_cached_index(cache_size: usize) -> Index {
-    let options = IndexOptions {
-        cache_size: Some(cache_size),
-        ..Default::default()
-    };
-    Index::new(options).unwrap()
 }
 
 /// 创建基本搜索选项
@@ -93,46 +68,6 @@ pub fn paginated_search_options(query: &str, limit: usize, offset: usize) -> Sea
         resolution: None,
         context: Some(false),
         suggest: Some(false),
-        resolve: Some(true),
-        enrich: Some(false),
-        cache: Some(false),
-        tag: None,
-        field: None,
-        pluck: None,
-        merge: Some(false),
-        boost: None,
-    }
-}
-
-/// 创建带上下文的搜索选项
-pub fn context_search_options(query: &str) -> SearchOptions {
-    SearchOptions {
-        query: Some(query.to_string()),
-        limit: Some(100),
-        offset: Some(0),
-        resolution: None,
-        context: Some(true),
-        suggest: Some(false),
-        resolve: Some(true),
-        enrich: Some(false),
-        cache: Some(false),
-        tag: None,
-        field: None,
-        pluck: None,
-        merge: Some(false),
-        boost: None,
-    }
-}
-
-/// 创建带建议的搜索选项
-pub fn suggest_search_options(query: &str) -> SearchOptions {
-    SearchOptions {
-        query: Some(query.to_string()),
-        limit: Some(100),
-        offset: Some(0),
-        resolution: None,
-        context: Some(false),
-        suggest: Some(true),
         resolve: Some(true),
         enrich: Some(false),
         cache: Some(false),

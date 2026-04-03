@@ -46,9 +46,10 @@ impl FieldSearch {
 }
 
 /// 权重应用策略
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub enum BoostStrategy {
     /// 乘法策略：将字段原始得分乘以权重值
+    #[default]
     Multiply,
     /// 加法策略：将权重值作为得分偏移量
     Add,
@@ -56,12 +57,6 @@ pub enum BoostStrategy {
     Exponential,
     /// 对数策略：使用对数函数调整得分
     Logarithmic,
-}
-
-impl Default for BoostStrategy {
-    fn default() -> Self {
-        BoostStrategy::Multiply
-    }
 }
 
 /// 字段权重配置
@@ -284,7 +279,7 @@ impl<'a> SearchCoordinator<'a> {
                 ..Default::default()
             };
 
-            let result = crate::search::search(&field.index(), &search_opts)?;
+            let result = crate::search::search(field.index(), &search_opts)?;
             field_results.push((field_search.name.clone(), result.results, final_weight));
         }
 
@@ -351,7 +346,7 @@ impl<'a> SearchCoordinator<'a> {
                 ..Default::default()
             };
 
-            let result = crate::search::search(&field.index(), &search_opts)?;
+            let result = crate::search::search(field.index(), &search_opts)?;
             field_results.push((field_search.name.clone(), result.results, field_boost * field_search.weight));
         }
 

@@ -87,7 +87,7 @@ where
 
     pub fn keys(&self) -> Vec<K> {
         let mut keys = Vec::new();
-        for (_, map) in &self.index {
+        for map in self.index.values() {
             for key in map.keys() {
                 keys.push(key.clone());
             }
@@ -97,7 +97,7 @@ where
 
     pub fn values(&self) -> Vec<&V> {
         let mut values = Vec::new();
-        for (_, map) in &self.index {
+        for map in self.index.values() {
             for value in map.values() {
                 values.push(value);
             }
@@ -107,7 +107,7 @@ where
 
     pub fn entries(&self) -> Vec<(K, &V)> {
         let mut entries = Vec::new();
-        for (_, map) in &self.index {
+        for map in self.index.values() {
             for (key, value) in map {
                 entries.push((key.clone(), value));
             }

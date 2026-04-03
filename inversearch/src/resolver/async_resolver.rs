@@ -81,11 +81,11 @@ impl AsyncResolver {
         self.resolver
     }
 
-    pub fn borrow(&self) -> &Resolver {
+    pub fn inner(&self) -> &Resolver {
         &self.resolver
     }
 
-    pub fn borrow_mut(&mut self) -> &mut Resolver {
+    pub fn inner_mut(&mut self) -> &mut Resolver {
         &mut self.resolver
     }
 }
@@ -185,7 +185,7 @@ mod tests {
         let resolver = Resolver::new(result, None);
         let async_resolver = AsyncResolver::new(resolver);
 
-        assert_eq!(async_resolver.borrow().result.len(), 1);
+        assert_eq!(async_resolver.inner().result.len(), 1);
     }
 
     #[test]
@@ -196,7 +196,7 @@ mod tests {
 
         async_resolver.limit(3).offset(1).boost(5);
 
-        let borrowed = async_resolver.borrow();
+        let borrowed = async_resolver.inner();
         assert_eq!(borrowed.boostval, 5);
     }
 

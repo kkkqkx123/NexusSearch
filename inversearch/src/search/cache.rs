@@ -347,10 +347,12 @@ mod tests {
 
     #[test]
     fn test_cache_key_generation() {
-        let mut options = SearchOptions::default();
-        options.query = Some("hello world".to_string());
-        options.limit = Some(50);
-        options.offset = Some(10);
+        let options = SearchOptions {
+            query: Some("hello world".to_string()),
+            limit: Some(50),
+            offset: Some(10),
+            ..Default::default()
+        };
         
         let key = CacheKeyGenerator::generate_search_key("Hello World", &options);
         assert!(key.contains("hello world"));

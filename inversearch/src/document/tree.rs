@@ -5,7 +5,7 @@
 //! # 支持的语法
 //!
 //! ```rust
-//! use inversearch::parse_tree;
+//! use inversearch_service::parse_tree;
 //!
 //! // 嵌套属性
 //! parse_tree("user.name", &mut vec![]);
@@ -52,21 +52,16 @@ pub enum PathParseError {
     NotFoundError(String),
 }
 
-/// 路径求值策略
-#[derive(Debug, Clone, PartialEq)]
+/// 求值策略
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum EvaluationStrategy {
-    /// 严格求值：任何错误都中断求值并返回错误
+    /// 严格求值：遇到错误立即返回
+    #[default]
     Strict,
     /// 宽松求值：遇到错误时返回默认值并继续
     Lenient,
     /// 部分求值：返回已成功求值的部分结果
     Partial,
-}
-
-impl Default for EvaluationStrategy {
-    fn default() -> Self {
-        EvaluationStrategy::Strict
-    }
 }
 
 /// 路径解析缓存
@@ -154,8 +149,8 @@ pub fn parse_tree(key: &str, marker: &mut Vec<bool>) -> Vec<TreePath> {
                     } else {
                         result.push(TreePath::Field(part.to_string()));
                     }
-                } else if index_part.starts_with('-') {
-                    let idx: usize = index_part[1..].parse().unwrap_or(0);
+                } else if let Some(idx_str) = index_part.strip_prefix('-') {
+                    let idx: usize = idx_str.parse().unwrap_or(0);
                     result.push(TreePath::NegativeIndex(idx, base_field.to_string()));
                 } else {
                     let idx: usize = index_part.parse().unwrap_or(0);
@@ -188,8 +183,8 @@ pub fn parse_tree(key: &str, marker: &mut Vec<bool>) -> Vec<TreePath> {
                     } else {
                         result.push(TreePath::Field(part.to_string()));
                     }
-                } else if index_part.starts_with('-') {
-                    let idx: usize = index_part[1..].parse().unwrap_or(0);
+                } else if let Some(idx_str) = index_part.strip_prefix('-') {
+                    let idx: usize = idx_str.parse().unwrap_or(0);
                     result.push(TreePath::NegativeIndex(idx, base_field.to_string()));
                 } else {
                     let idx: usize = index_part.parse().unwrap_or(0);

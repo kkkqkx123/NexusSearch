@@ -105,15 +105,14 @@ pub struct FieldSearchResult {
 pub type FieldSearchResults = Vec<FieldSearchResult>;
 
 #[derive(Debug, Clone)]
+#[derive(Default)]
 pub struct EncoderCache {
     cache: HashMap<String, Vec<String>>,
 }
 
 impl EncoderCache {
     pub fn new() -> Self {
-        Self {
-            cache: HashMap::new(),
-        }
+        Self::default()
     }
 
     pub fn get_or_encode(&mut self, query: &str, encoder: &Encoder) -> Result<Vec<String>> {

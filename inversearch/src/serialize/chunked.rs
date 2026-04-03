@@ -66,14 +66,14 @@ impl ChunkedSerializer {
                 }
             },
             RegistryData::Map(map) => {
-                for (&doc_id, _) in map {
+                for doc_id in map.keys() {
                     items.push(doc_id.to_string());
                 }
             }
         }
 
         let chunk_size = self.calculate_chunk_size(items.len(), CHUNK_SIZE_REG);
-        let total_chunks = (items.len() + chunk_size - 1) / chunk_size;
+        let total_chunks = items.len().div_ceil(chunk_size);
 
         for (chunk_index, chunk) in items.chunks(chunk_size).enumerate() {
             let chunk_data = ChunkData {
@@ -102,7 +102,7 @@ impl ChunkedSerializer {
             .collect();
 
         let chunk_size = self.calculate_chunk_size(items.len(), CHUNK_SIZE_MAP);
-        let total_chunks = (items.len() + chunk_size - 1) / chunk_size;
+        let total_chunks = items.len().div_ceil(chunk_size);
 
         for (chunk_index, chunk) in items.chunks(chunk_size).enumerate() {
             let chunk_data = ChunkData {
@@ -131,7 +131,7 @@ impl ChunkedSerializer {
             .collect();
 
         let chunk_size = self.calculate_chunk_size(items.len(), CHUNK_SIZE_CTX);
-        let total_chunks = (items.len() + chunk_size - 1) / chunk_size;
+        let total_chunks = items.len().div_ceil(chunk_size);
 
         for (chunk_index, chunk) in items.chunks(chunk_size).enumerate() {
             let chunk_data = ChunkData {

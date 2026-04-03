@@ -174,10 +174,7 @@ async fn test_grpc_search_empty_query() {
     let response = InversearchServiceTrait::search(&service, search_request).await;
     
     // 空查询可能返回错误或空结果，取决于实现
-    match response {
-        Ok(_) => {},
-        Err(_) => {},
-    }
+    let _ = response;
 }
 
 /// 测试搜索不存在的内容

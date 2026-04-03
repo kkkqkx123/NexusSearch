@@ -101,15 +101,7 @@ impl Tokenizer {
 
     pub fn tokenize_with_positions(&self, text: &str) -> Vec<(String, usize)> {
         let tokens = self.encoder.encode(text).unwrap_or_default();
-        let mut result = Vec::new();
-        let mut position = 0;
-
-        for token in &tokens {
-            result.push((token.clone(), position));
-            position += 1;
-        }
-
-        result
+        tokens.into_iter().enumerate().map(|(pos, token)| (token, pos)).collect()
     }
 
     pub fn tokenize_with_offsets(&self, text: &str) -> Vec<(String, usize, usize)> {
