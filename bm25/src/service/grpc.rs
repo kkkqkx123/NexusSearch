@@ -222,7 +222,7 @@ impl Bm25ServiceTrait for BM25Service {
         let stats_before = stats::get_stats(&manager)
             .map_err(|e| Status::internal(format!("Failed to get stats: {}", e)))?;
 
-        let writer = manager.writer()
+        let mut writer = manager.writer()
             .map_err(|e| Status::internal(format!("Failed to get writer: {}", e)))?;
 
         writer.commit()

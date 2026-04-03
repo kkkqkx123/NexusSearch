@@ -193,7 +193,7 @@ mod tests {
         let reader1 = manager.reader()?;
         let reader2 = manager.reader()?;
 
-        assert!(Arc::ptr_eq(&reader1, &reader2));
+        assert!(std::ptr::eq(&reader1, &reader2));
 
         Ok(())
     }
@@ -209,7 +209,7 @@ mod tests {
         manager.clear_reader_cache();
         let reader2 = manager.reload_reader()?;
 
-        assert!(!Arc::ptr_eq(&reader1, &reader2));
+        assert!(!std::ptr::eq(&reader1, &reader2));
 
         Ok(())
     }
