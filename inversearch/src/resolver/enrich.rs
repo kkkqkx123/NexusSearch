@@ -215,11 +215,9 @@ impl Enricher {
         for (idx, &id) in ids.iter().enumerate() {
             let mut doc_value = documents.get(idx).cloned().flatten().unwrap_or(Value::Object(serde_json::Map::new()));
 
-            if let Some(meta) = metadata.get(&id) {
-                if let Value::Object(meta_obj) = meta {
-                    for (key, value) in meta_obj {
-                        doc_value[key] = value.clone();
-                    }
+            if let Some(Value::Object(meta_obj)) = metadata.get(&id) {
+                for (key, value) in meta_obj {
+                    doc_value[key] = value.clone();
                 }
             }
 
@@ -461,11 +459,11 @@ mod tests {
 
         assert_eq!(enriched.len(), 3);
         assert_eq!(enriched[0].id, 0);
-        assert_eq!(enriched[0].doc.as_ref().unwrap()["name"], "test1");
+        assert_eq!(enriched[0].doc.as_ref().expect("doc should exist")["name"], "test1");
         assert_eq!(enriched[1].id, 1);
-        assert_eq!(enriched[1].doc.as_ref().unwrap()["name"], "test2");
+        assert_eq!(enriched[1].doc.as_ref().expect("doc should exist")["name"], "test2");
         assert_eq!(enriched[2].id, 2);
-        assert_eq!(enriched[2].doc.as_ref().unwrap()["name"], "test3");
+        assert_eq!(enriched[2].doc.as_ref().expect("doc should exist")["name"], "test3");
     }
 
     #[test]
@@ -493,8 +491,8 @@ mod tests {
         let enriched = Enricher::enrich_with_metadata(&ids, &documents, &metadata);
 
         assert_eq!(enriched.len(), 2);
-        assert_eq!(enriched[0].doc.as_ref().unwrap()["source"], "db1");
-        assert_eq!(enriched[1].doc.as_ref().unwrap()["source"], "db2");
+        assert_eq!(enriched[0].doc.as_ref().expect("doc should exist")["source"], "db1");
+        assert_eq!(enriched[1].doc.as_ref().expect("doc should exist")["source"], "db2");
     }
 
     #[test]
@@ -514,9 +512,9 @@ mod tests {
         let enriched = Enricher::enrich_with_scores(&ids, &documents, &scores);
 
         assert_eq!(enriched.len(), 3);
-        assert_eq!(enriched[0].doc.as_ref().unwrap()["_score"], 0.95);
-        assert_eq!(enriched[1].doc.as_ref().unwrap()["_score"], 0.85);
-        assert_eq!(enriched[2].doc.as_ref().unwrap()["_score"], 0.75);
+        assert_eq!(enriched[0].doc.as_ref().expect("doc should exist")["_score"], 0.95);
+        assert_eq!(enriched[1].doc.as_ref().expect("doc should exist")["_score"], 0.85);
+        assert_eq!(enriched[2].doc.as_ref().expect("doc should exist")["_score"], 0.75);
     }
 
     #[test]

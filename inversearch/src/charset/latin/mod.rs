@@ -56,12 +56,15 @@ fn get_compact_replacer() -> Vec<(String, String)> {
 // ========== Soundex 编码 ==========
 pub fn soundex_encode(string_to_encode: &str) -> String {
     let codes = get_soundex_codes();
-    
+
     if string_to_encode.is_empty() {
         return String::new();
     }
-    
-    let first_char = string_to_encode.chars().next().unwrap();
+
+    let first_char = match string_to_encode.chars().next() {
+        Some(c) => c,
+        None => return String::new(),
+    };
     let mut encoded_string = first_char.to_string();
     let mut last = codes.get(&first_char.to_ascii_lowercase()).copied().unwrap_or(0);
     

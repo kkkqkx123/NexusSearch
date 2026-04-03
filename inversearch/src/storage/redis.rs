@@ -422,8 +422,9 @@ impl RedisStorage {
     /// 记录操作开始时间（内部使用）
     fn record_operation_start(&self) -> Instant {
         let start_time = Instant::now();
-        let mut last_op = self.last_operation_time.lock().unwrap();
-        *last_op = Some(start_time);
+        if let Ok(mut last_op) = self.last_operation_time.lock() {
+            *last_op = Some(start_time);
+        }
         start_time
     }
 

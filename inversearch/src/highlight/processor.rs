@@ -170,7 +170,10 @@ impl HighlightProcessor {
         }
 
         // Apply boundary processing if needed
-        if config.boundary.is_some() && (first_match_pos >= 0 || config.boundary.as_ref().unwrap().before.is_some() || config.boundary.as_ref().unwrap().after.is_some()) {
+        let should_apply_boundary = config.boundary.as_ref().map_or(false, |b| {
+            first_match_pos >= 0 || b.before.is_some() || b.after.is_some()
+        });
+        if should_apply_boundary {
             apply_advanced_boundary(boundary_terms, config)
         } else {
             self.join_boundary_terms(&boundary_terms)

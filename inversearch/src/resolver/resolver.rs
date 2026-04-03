@@ -140,11 +140,15 @@ impl Resolver {
             options: Some(options),
         };
 
-        if let Some(ref query) = resolver.options.as_ref().unwrap().query() {
-            if query.is_empty() {
-                resolver.result = vec![];
+        if let Some(opts) = resolver.options.as_ref() {
+            if let Some(query) = opts.query() {
+                if query.is_empty() {
+                    resolver.result = vec![];
+                } else {
+                    resolver.result = vec![vec![]];
+                }
             } else {
-                resolver.result = vec![vec![]];
+                resolver.result = vec![];
             }
         } else {
             resolver.result = vec![];
@@ -447,8 +451,8 @@ mod tests {
         options.options.query = Some("test".to_string());
         options.options.limit = Some(10);
         options.options.offset = Some(5);
-        
-        let resolver = Resolver::from_options(options, None).unwrap();
+
+        let resolver = Resolver::from_options(options, None).expect("Resolver::from_options should succeed");
         assert_eq!(resolver.boostval, 0);
         assert!(!resolver.result.is_empty());
     }

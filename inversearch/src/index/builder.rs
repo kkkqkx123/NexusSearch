@@ -261,22 +261,22 @@ mod tests {
     #[test]
     fn test_add_document() {
         let mut index = Index::default();
-        add_document(&mut index, 1, "hello world", false, false).unwrap();
+        add_document(&mut index, 1, "hello world", false, false).expect("add_document should succeed");
         assert!(index.contains(1));
     }
 
     #[test]
     fn test_add_document_empty() {
         let mut index = Index::default();
-        add_document(&mut index, 1, "", false, false).unwrap();
+        add_document(&mut index, 1, "", false, false).expect("add_document with empty content should succeed");
         assert!(!index.contains(1));
     }
 
     #[test]
     fn test_add_document_append() {
         let mut index = Index::default();
-        add_document(&mut index, 1, "hello", false, false).unwrap();
-        add_document(&mut index, 1, "world", true, false).unwrap();
+        add_document(&mut index, 1, "hello", false, false).expect("add_document should succeed");
+        add_document(&mut index, 1, "world", true, false).expect("add_document append should succeed");
         assert!(index.contains(1));
     }
 }

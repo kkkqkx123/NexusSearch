@@ -11,7 +11,9 @@ pub struct CompressCache {
 
 impl CompressCache {
     pub fn new(max_size: usize) -> Self {
-        let cap = NonZeroUsize::new(max_size.max(1)).unwrap_or(NonZeroUsize::new(1000).unwrap());
+        let cap = NonZeroUsize::new(max_size.max(1))
+            .or_else(|| NonZeroUsize::new(1000))
+            .expect("Default cache size should be valid");
         CompressCache {
             cache: Mutex::new(LruCache::new(cap)),
             max_size,
@@ -19,13 +21,14 @@ impl CompressCache {
     }
 
     pub fn get(&self, key: &str) -> Option<String> {
-        let mut cache = self.cache.lock().unwrap();
+        let mut cache = self.cache.lock().ok()?;
         cache.get(key).cloned()
     }
 
     pub fn insert(&self, key: String, value: String) {
-        let mut cache = self.cache.lock().unwrap();
-        cache.put(key, value);
+        if let Ok(mut cache) = self.cache.lock() {
+            cache.put(key, value);
+        }
     }
 
     pub fn len(&self) -> usize {

@@ -245,65 +245,65 @@ mod tests {
 
     #[tokio::test]
     async fn test_cached_storage_basic() {
-        let temp_dir = TempDir::new().unwrap();
+        let temp_dir = TempDir::new().expect("TempDir::new should succeed");
         let mut storage = CachedStorage::with_path(temp_dir.path());
 
-        storage.open().await.unwrap();
+        storage.open().await.expect("storage.open should succeed");
 
         let mut index = Index::default();
-        index.add(1, "hello world", false).unwrap();
-        index.add(2, "rust programming", false).unwrap();
+        index.add(1, "hello world", false).expect("add should succeed");
+        index.add(2, "rust programming", false).expect("add should succeed");
 
         // 提交到存储
-        storage.commit(&index, false, false).await.unwrap();
+        storage.commit(&index, false, false).await.expect("commit should succeed");
         assert!(storage.is_dirty());
 
         // 测试获取
-        let results = storage.get("hello", None, 10, 0, true, false).await.unwrap();
+        let results = storage.get("hello", None, 10, 0, true, false).await.expect("get should succeed");
         assert_eq!(results.len(), 1);
         assert!(results.contains(&1));
 
         // 关闭存储（会保存到文件）
-        storage.close().await.unwrap();
+        storage.close().await.expect("close should succeed");
         assert!(!storage.is_dirty());
 
         // 重新打开并验证数据还在
         let mut storage2 = CachedStorage::with_path(temp_dir.path());
-        storage2.open().await.unwrap();
+        storage2.open().await.expect("storage2.open should succeed");
 
-        let results2 = storage2.get("hello", None, 10, 0, true, false).await.unwrap();
+        let results2 = storage2.get("hello", None, 10, 0, true, false).await.expect("get should succeed");
         assert_eq!(results2.len(), 1);
 
-        storage2.destroy().await.unwrap();
+        storage2.destroy().await.expect("destroy should succeed");
     }
 
     #[tokio::test]
     async fn test_cached_storage_persistence() {
-        let temp_dir = TempDir::new().unwrap();
+        let temp_dir = TempDir::new().expect("TempDir::new should succeed");
         let path = temp_dir.path().to_path_buf();
 
         // 第一次创建并写入数据
         {
             let mut storage = CachedStorage::with_path(&path);
-            storage.open().await.unwrap();
+            storage.open().await.expect("storage.open should succeed");
 
             let mut index = Index::default();
-            index.add(1, "persistent data", false).unwrap();
-            storage.commit(&index, false, false).await.unwrap();
+            index.add(1, "persistent data", false).expect("add should succeed");
+            storage.commit(&index, false, false).await.expect("commit should succeed");
 
-            storage.close().await.unwrap();
+            storage.close().await.expect("close should succeed");
         }
 
         // 第二次打开验证数据持久化
         {
             let mut storage = CachedStorage::with_path(&path);
-            storage.open().await.unwrap();
+            storage.open().await.expect("storage.open should succeed");
 
-            let results = storage.get("persistent", None, 10, 0, true, false).await.unwrap();
+            let results = storage.get("persistent", None, 10, 0, true, false).await.expect("get should succeed");
             assert_eq!(results.len(), 1);
             assert!(results.contains(&1));
 
-            storage.destroy().await.unwrap();
+            storage.destroy().await.expect("destroy should succeed");
         }
     }
 }

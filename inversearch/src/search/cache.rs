@@ -62,7 +62,9 @@ pub struct SearchCache {
 impl SearchCache {
     /// 创建新的搜索缓存
     pub fn new(max_size: usize, default_ttl: Option<Duration>) -> Self {
-        let cap = NonZeroUsize::new(max_size.max(1)).unwrap_or(NonZeroUsize::new(1000).unwrap());
+        let cap = NonZeroUsize::new(max_size.max(1))
+            .or_else(|| NonZeroUsize::new(1000))
+            .expect("Default cache size should be valid");
         Self {
             store: Arc::new(RwLock::new(LruCache::new(cap))),
             default_ttl,

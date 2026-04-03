@@ -336,7 +336,7 @@ pub fn extract_value_with_strategy(
                     }
                     _ => {
                         if strategy == EvaluationStrategy::Strict {
-                            return Err(PathParseError::TypeError(format!("Cannot apply wildcard to non-object type")));
+                            return Err(PathParseError::TypeError("Cannot apply wildcard to non-object type".to_string()));
                         }
                         partial_success = false;
                         continue;

@@ -162,7 +162,7 @@ pub fn multi_term_search(
 
     // 执行并集操作 (OR logic) - 返回包含任意一个词的结果
     let unioned = if intermediate_results.len() == 1 {
-        intermediate_results.into_iter().next().unwrap()
+        intermediate_results.into_iter().next().unwrap_or_default()
     } else {
         perform_union(&intermediate_results)
     };

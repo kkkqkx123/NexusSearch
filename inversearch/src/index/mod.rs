@@ -74,8 +74,12 @@ impl Index {
         };
 
         // 初始化缓存（可选）
-        let cache = if options.cache_size.unwrap_or(0) > 0 {
-            Some(SearchCache::new(options.cache_size.unwrap(), options.cache_ttl))
+        let cache = if let Some(size) = options.cache_size {
+            if size > 0 {
+                Some(SearchCache::new(size, options.cache_ttl))
+            } else {
+                None
+            }
         } else {
             None
         };
