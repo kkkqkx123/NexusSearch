@@ -208,10 +208,9 @@ pub fn extract_value_with_strategy(
     strategy: EvaluationStrategy,
 ) -> Result<String, PathParseError> {
     let mut current = document;
-    let mut partial_success = true;
     
     for segment in path {
-        current = match segment {
+        let next = match segment {
             TreePath::Field(name) => {
                 match current.get(name) {
                     Some(v) => v,
@@ -219,8 +218,7 @@ pub fn extract_value_with_strategy(
                         if strategy == EvaluationStrategy::Strict {
                             return Err(PathParseError::NotFoundError(format!("Field '{}' not found", name)));
                         }
-                        partial_success = false;
-                        continue;
+                        return Ok(String::new());
                     }
                 }
             }
@@ -233,24 +231,21 @@ pub fn extract_value_with_strategy(
                                 if strategy == EvaluationStrategy::Strict {
                                     return Err(PathParseError::OutOfBoundsError(format!("Index {} out of bounds for field '{}'", idx, field)));
                                 }
-                                partial_success = false;
-                                continue;
+                                return Ok(String::new());
                             }
                         },
                         None => {
                             if strategy == EvaluationStrategy::Strict {
                                 return Err(PathParseError::TypeError(format!("Field '{}' is not an array", field)));
                             }
-                            partial_success = false;
-                            continue;
+                            return Ok(String::new());
                         }
                     },
                     None => {
                         if strategy == EvaluationStrategy::Strict {
                             return Err(PathParseError::NotFoundError(format!("Field '{}' not found", field)));
                         }
-                        partial_success = false;
-                        continue;
+                        return Ok(String::new());
                     }
                 }
             }
@@ -265,8 +260,7 @@ pub fn extract_value_with_strategy(
                                     if strategy == EvaluationStrategy::Strict {
                                         return Err(PathParseError::OutOfBoundsError(format!("Negative index -{} out of bounds for field '{}'", idx, field)));
                                     }
-                                    partial_success = false;
-                                    continue;
+                                    return Ok(String::new());
                                 }
                             }
                         }
@@ -274,16 +268,14 @@ pub fn extract_value_with_strategy(
                             if strategy == EvaluationStrategy::Strict {
                                 return Err(PathParseError::TypeError(format!("Field '{}' is not an array", field)));
                             }
-                            partial_success = false;
-                            continue;
+                            return Ok(String::new());
                         }
                     },
                     None => {
                         if strategy == EvaluationStrategy::Strict {
                             return Err(PathParseError::NotFoundError(format!("Field '{}' not found", field)));
                         }
-                        partial_success = false;
-                        continue;
+                        return Ok(String::new());
                     }
                 }
             }
@@ -295,8 +287,7 @@ pub fn extract_value_with_strategy(
                                 if strategy == EvaluationStrategy::Strict {
                                     return Err(PathParseError::OutOfBoundsError(format!("Range [{}-{}] out of bounds for field '{}'", start, end, field)));
                                 }
-                                partial_success = false;
-                                continue;
+                                return Ok(String::new());
                             }
                             let values: Vec<&Value> = arr[*start..=*end].iter().collect();
                             return Ok(values.iter().filter_map(|v| v.as_str()).collect::<Vec<_>>().join(", "));
@@ -305,16 +296,14 @@ pub fn extract_value_with_strategy(
                             if strategy == EvaluationStrategy::Strict {
                                 return Err(PathParseError::TypeError(format!("Field '{}' is not an array", field)));
                             }
-                            partial_success = false;
-                            continue;
+                            return Ok(String::new());
                         }
                     },
                     None => {
                         if strategy == EvaluationStrategy::Strict {
                             return Err(PathParseError::NotFoundError(format!("Field '{}' not found", field)));
                         }
-                        partial_success = false;
-                        continue;
+                        return Ok(String::new());
                     }
                 }
             }
@@ -329,8 +318,7 @@ pub fn extract_value_with_strategy(
                             if strategy == EvaluationStrategy::Strict {
                                 return Err(PathParseError::NotFoundError(format!("No fields matching pattern '{}'", pattern)));
                             }
-                            partial_success = false;
-                            continue;
+                            return Ok(String::new());
                         }
                         return Ok(matched.iter().filter_map(|v| v.as_str()).collect::<Vec<_>>().join(", "));
                     }
@@ -338,16 +326,12 @@ pub fn extract_value_with_strategy(
                         if strategy == EvaluationStrategy::Strict {
                             return Err(PathParseError::TypeError("Cannot apply wildcard to non-object type".to_string()));
                         }
-                        partial_success = false;
-                        continue;
+                        return Ok(String::new());
                     }
                 }
             }
         };
-    }
-    
-    if !partial_success && strategy == EvaluationStrategy::Partial {
-        return Err(PathParseError::NotFoundError("Partial match".to_string()));
+        current = next;
     }
     
     match current {
@@ -361,7 +345,10 @@ pub fn extract_value_with_strategy(
 
 /// 从嵌套结构中提取字符串值
 pub fn extract_value(document: &Value, path: &[TreePath]) -> Option<String> {
-    extract_value_with_strategy(document, path, EvaluationStrategy::Lenient).ok()
+    match extract_value_with_strategy(document, path, EvaluationStrategy::Lenient) {
+        Ok(value) if !value.is_empty() => Some(value),
+        _ => None,
+    }
 }
 
 #[cfg(test)]

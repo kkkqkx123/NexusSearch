@@ -5,4 +5,6 @@
 pub mod fixtures;
 
 // 重新导出 fixtures 中的常用项
+// 抑制未使用导入警告，这些固件供各个测试文件选择性使用
+#[allow(unused_imports)]
 pub use fixtures::*;

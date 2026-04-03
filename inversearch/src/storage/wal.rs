@@ -366,7 +366,7 @@ impl WALManager {
             let file = tokio_fs::File::open(&self.wal_path).await?;
             let reader = BufReader::new(file.into_std().await);
 
-            for line in reader.lines().flatten() {
+            for line in reader.lines().map_while(|r| r.ok()) {
                 if let Ok(decoded) = general_purpose::STANDARD.decode(&line) {
                     if let Ok(change) = bincode::deserialize::<IndexChange>(&decoded) {
                         self.apply_change(index, change)?;

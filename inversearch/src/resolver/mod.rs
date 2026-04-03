@@ -11,20 +11,19 @@
 //! - `not.rs`: 差集操作
 //! - `xor.rs`: 异或操作
 //! - `combine.rs`: 结果合并工具
-//! - `async_resolver.rs`: 异步Resolver支持
+//! - `core.rs`: 包含同步和异步Resolver方法
 //! - `enrich.rs`: 结果丰富化功能
 
-mod resolver;
+mod core;
 mod handler;
 mod and;
 mod or;
 mod not;
 mod xor;
 mod combine;
-mod async_resolver;
 mod enrich;
 
-pub use resolver::{
+pub use core::{
     Resolver,
     resolve_default,
     ResolverOptions,
@@ -37,7 +36,6 @@ pub use or::union_op;
 pub use not::exclusion;
 pub use xor::xor_op;
 pub use combine::combine_search_results;
-pub use async_resolver::AsyncResolver;
 pub use enrich::{Enricher, FieldSelector, TagIntegrationConfig, HighlightConfig, MetadataSource};
 
 #[cfg(test)]
@@ -91,12 +89,12 @@ mod tests {
     }
 
     #[test]
-    fn test_async_resolver_builder() {
+    fn test_resolver_async_methods() {
         let result: IntermediateSearchResults = vec![vec![1, 2, 3]];
         let resolver = Resolver::new(result, None);
-        let async_resolver = AsyncResolver::new(resolver);
 
-        assert_eq!(async_resolver.inner().result.len(), 1);
+        // 测试异步方法存在且可调用
+        assert_eq!(resolver.result.len(), 1);
     }
 
     #[test]

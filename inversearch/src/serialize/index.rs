@@ -94,7 +94,7 @@ impl Index {
                 for map_data in map.index.values() {
                     for (&doc_id, refs) in map_data {
                         let ref_data: Vec<IndexRefData> = refs.iter()
-                            .map(|r| IndexRefData::from_index_ref(r))
+                            .map(IndexRefData::from_index_ref)
                             .collect();
                         result.insert(doc_id, ref_data);
                     }

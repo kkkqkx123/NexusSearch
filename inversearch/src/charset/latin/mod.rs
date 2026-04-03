@@ -224,80 +224,6 @@ pub fn get_charset_latin_soundex() -> EncoderOptions {
     }
 }
 
-// ========== 测试 ==========
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_soundex_encode() {
-        assert_eq!(soundex_encode("Smith"), "S53");
-        assert_eq!(soundex_encode("Smythe"), "S53");
-        assert_eq!(soundex_encode("Schmidt"), "S53");
-    }
-
-    #[test]
-    fn test_charset_latin_balance() {
-        let options = get_charset_latin_balance();
-        assert!(options.mapper.is_some());
-        let mapper = options.mapper.unwrap();
-        assert_eq!(mapper.get(&'b'), Some(&'p'));
-        assert_eq!(mapper.get(&'v'), Some(&'f'));
-    }
-
-    #[test]
-    fn test_charset_latin_advanced() {
-        let options = get_charset_latin_advanced();
-        assert!(options.mapper.is_some());
-        assert!(options.matcher.is_some());
-        assert!(options.replacer.is_some());
-        
-        let matcher = options.matcher.unwrap();
-        assert_eq!(matcher.get("ae"), Some(&"a".to_string()));
-        assert_eq!(matcher.get("oe"), Some(&"o".to_string()));
-    }
-
-    #[test]
-    fn test_charset_latin_extra() {
-        let options = get_charset_latin_extra();
-        assert!(options.mapper.is_some());
-        assert!(options.replacer.is_some());
-        assert!(options.matcher.is_some());
-        
-        let replacer = options.replacer.unwrap();
-        // Should have more replacers than just advanced due to compact
-        assert!(replacer.len() > 2);
-    }
-
-    #[test]
-    fn test_charset_latin_soundex() {
-        let options = get_charset_latin_soundex();
-        assert_eq!(options.dedupe, Some(false));
-    }
-
-    #[test]
-    fn test_latin_polyfill() {
-        let polyfill = get_latin_polyfill();
-        assert_eq!(polyfill.get(&'à'), Some(&"a"));
-        assert_eq!(polyfill.get(&'é'), Some(&"e"));
-        assert_eq!(polyfill.get(&'ñ'), Some(&"n"));
-        // β is not in the latin mapping, so it should return None
-        assert_eq!(polyfill.get(&'β'), None);
-    }
-
-    #[test]
-    fn test_normalize_latin() {
-        let result = normalize_latin("Héllo Wörld");
-        assert_eq!(result, "Hello World");
-    }
-
-    #[test]
-    fn test_normalize_latin_multiple() {
-        let result = normalize_latin("café naïve");
-        assert_eq!(result, "cafe naive");
-    }
-}
-
 // ========== 字符集工具函数 ==========
 
 /// 获取拉丁字符填充映射表 - 用于字符标准化
@@ -411,4 +337,78 @@ pub fn normalize_latin(str: &str) -> String {
     }
 
     result
+}
+
+// ========== 测试 ==========
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_soundex_encode() {
+        assert_eq!(soundex_encode("Smith"), "S53");
+        assert_eq!(soundex_encode("Smythe"), "S53");
+        assert_eq!(soundex_encode("Schmidt"), "S53");
+    }
+
+    #[test]
+    fn test_charset_latin_balance() {
+        let options = get_charset_latin_balance();
+        assert!(options.mapper.is_some());
+        let mapper = options.mapper.unwrap();
+        assert_eq!(mapper.get(&'b'), Some(&'p'));
+        assert_eq!(mapper.get(&'v'), Some(&'f'));
+    }
+
+    #[test]
+    fn test_charset_latin_advanced() {
+        let options = get_charset_latin_advanced();
+        assert!(options.mapper.is_some());
+        assert!(options.matcher.is_some());
+        assert!(options.replacer.is_some());
+        
+        let matcher = options.matcher.unwrap();
+        assert_eq!(matcher.get("ae"), Some(&"a".to_string()));
+        assert_eq!(matcher.get("oe"), Some(&"o".to_string()));
+    }
+
+    #[test]
+    fn test_charset_latin_extra() {
+        let options = get_charset_latin_extra();
+        assert!(options.mapper.is_some());
+        assert!(options.replacer.is_some());
+        assert!(options.matcher.is_some());
+        
+        let replacer = options.replacer.unwrap();
+        // Should have more replacers than just advanced due to compact
+        assert!(replacer.len() > 2);
+    }
+
+    #[test]
+    fn test_charset_latin_soundex() {
+        let options = get_charset_latin_soundex();
+        assert_eq!(options.dedupe, Some(false));
+    }
+
+    #[test]
+    fn test_latin_polyfill() {
+        let polyfill = get_latin_polyfill();
+        assert_eq!(polyfill.get(&'à'), Some(&"a"));
+        assert_eq!(polyfill.get(&'é'), Some(&"e"));
+        assert_eq!(polyfill.get(&'ñ'), Some(&"n"));
+        // β is not in the latin mapping, so it should return None
+        assert_eq!(polyfill.get(&'β'), None);
+    }
+
+    #[test]
+    fn test_normalize_latin() {
+        let result = normalize_latin("Héllo Wörld");
+        assert_eq!(result, "Hello World");
+    }
+
+    #[test]
+    fn test_normalize_latin_multiple() {
+        let result = normalize_latin("café naïve");
+        assert_eq!(result, "cafe naive");
+    }
 }

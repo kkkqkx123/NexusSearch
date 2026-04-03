@@ -2,6 +2,8 @@
 //!
 //! 提供测试所需的辅助函数和宏
 
+#![allow(dead_code)]
+
 use inversearch_service::{Index, SearchOptions};
 use inversearch_service::index::IndexOptions;
 

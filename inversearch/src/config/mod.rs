@@ -284,7 +284,7 @@ mod tests {
     fn test_file_storage_config_default() {
         let config = FileStorageConfig::default();
         assert_eq!(config.base_path, "./data");
-        assert_eq!(config.auto_save, true);
+        assert!(config.auto_save);
         assert_eq!(config.save_interval_secs, 60);
     }
 
@@ -294,7 +294,7 @@ mod tests {
         let config = WALConfig::default();
         assert_eq!(config.base_path, "./wal");
         assert_eq!(config.max_wal_size, 100 * 1024 * 1024);
-        assert_eq!(config.compression, true);
+        assert!(config.compression);
         assert_eq!(config.snapshot_interval, 1000);
     }
 

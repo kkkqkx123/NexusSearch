@@ -19,7 +19,7 @@ fn test_highlight_config_from_options() {
     let config = HighlightConfig::from_options(&options).unwrap();
     assert_eq!(config.markup_open, "<b>");
     assert_eq!(config.markup_close, "</b>");
-    assert_eq!(config.clip, true);
+    assert!(config.clip);
     assert_eq!(config.merge, Some("</b> <b>".to_string()));
     assert_eq!(config.ellipsis, "[...]");
 }

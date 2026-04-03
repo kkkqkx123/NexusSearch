@@ -218,7 +218,7 @@ impl ChunkDataProvider {
     }
 
     /// 获取下一个分块
-    pub fn next(&mut self) -> Result<Option<ChunkData>> {
+    pub fn fetch_next(&mut self) -> Result<Option<ChunkData>> {
         if self.current_index < self.chunks.len() {
             let chunk = self.chunks[self.current_index].clone();
             self.current_index += 1;
@@ -270,7 +270,7 @@ mod tests {
         // 分块导入
         let mut imported_index = Index::default();
         let mut provider = ChunkDataProvider::new(chunks);
-        serializer.import_chunked(&mut imported_index, || provider.next()).unwrap();
+        serializer.import_chunked(&mut imported_index, || provider.fetch_next()).unwrap();
 
         // 验证导入结果
         let results = imported_index.search_simple("hello").unwrap();
@@ -301,14 +301,14 @@ mod tests {
         assert!(provider.has_more());
         assert_eq!(provider.total_chunks(), 2);
         
-        let chunk1 = provider.next().unwrap().unwrap();
+        let chunk1 = provider.fetch_next().unwrap().unwrap();
         assert_eq!(chunk1.chunk_index, 0);
-        
-        let chunk2 = provider.next().unwrap().unwrap();
+
+        let chunk2 = provider.fetch_next().unwrap().unwrap();
         assert_eq!(chunk2.chunk_index, 1);
-        
+
         assert!(!provider.has_more());
-        assert!(provider.next().unwrap().is_none());
+        assert!(provider.fetch_next().unwrap().is_none());
         
         provider.reset();
         assert!(provider.has_more());

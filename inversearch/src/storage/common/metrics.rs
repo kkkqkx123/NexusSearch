@@ -7,6 +7,7 @@ use std::time::Instant;
 
 /// 存储性能指标
 #[derive(Debug, Clone)]
+#[derive(Default)]
 pub struct StorageMetrics {
     pub operation_count: usize,
     pub average_latency: usize, // 微秒
@@ -14,16 +15,6 @@ pub struct StorageMetrics {
     pub error_count: usize,
 }
 
-impl Default for StorageMetrics {
-    fn default() -> Self {
-        Self {
-            operation_count: 0,
-            average_latency: 0,
-            memory_usage: 0,
-            error_count: 0,
-        }
-    }
-}
 
 impl StorageMetrics {
     /// 创建空的指标

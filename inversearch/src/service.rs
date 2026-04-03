@@ -37,7 +37,9 @@ use crate::storage::wal_storage::WALStorage;
 use crate::storage::cached::CachedStorage;
 
 // Import config
-use crate::config::{Config, StorageBackend};
+use crate::config::Config;
+#[cfg(any(feature = "store-memory", feature = "store-file", feature = "store-redis", feature = "store-wal"))]
+use crate::config::StorageBackend;
 
 #[cfg(feature = "store-wal")]
 use crate::storage::wal::WALConfig;
@@ -118,7 +120,7 @@ pub async fn create_storage_from_config(config: &Config) -> Arc<RwLock<dyn Stora
             // 默认使用缓存存储
             #[cfg(feature = "store-cached")]
             {
-                return Arc::new(RwLock::new(CachedStorage::new()));
+                Arc::new(RwLock::new(CachedStorage::new()))
             }
             #[cfg(not(feature = "store-cached"))]
             panic!("No storage backend enabled");

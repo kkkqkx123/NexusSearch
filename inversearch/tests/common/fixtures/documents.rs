@@ -2,6 +2,8 @@
 //!
 //! 提供各种测试场景所需的文档数据
 
+#![allow(dead_code)]
+
 /// 测试文档结构
 #[derive(Debug, Clone, Copy)]
 pub struct TestDocument {

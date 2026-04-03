@@ -270,8 +270,8 @@ impl Resolver {
             for array in combined {
                 let mut unique_array = Vec::new();
                 for &id in &array {
-                    if !seen.contains_key(&id) {
-                        seen.insert(id, true);
+                    if let std::collections::hash_map::Entry::Vacant(e) = seen.entry(id) {
+                        e.insert(true);
                         unique_array.push(id);
                     }
                 }
@@ -336,11 +336,10 @@ impl Resolver {
             
             for ids in &other {
                 for &id in ids {
-                    if counts.get(&id) == Some(&1) {
-                        if !xor_result.contains(&id) {
+                    if counts.get(&id) == Some(&1)
+                        && !xor_result.contains(&id) {
                             xor_result.push(id);
                         }
-                    }
                 }
             }
             
@@ -368,6 +367,100 @@ impl Resolver {
     pub fn with_index(mut self, index: crate::Index) -> Self {
         self.index = Some(index);
         self
+    }
+
+    pub async fn resolve_async(&mut self, limit: Option<usize>, offset: Option<usize>, enrich: bool) -> SearchResults {
+        self.resolve(limit, offset, enrich)
+    }
+
+    pub async fn resolve_with_callback<F>(&mut self, limit: Option<usize>, offset: Option<usize>, enrich: bool, callback: F)
+    where
+        F: FnOnce(SearchResults),
+    {
+        let result = self.resolve_async(limit, offset, enrich).await;
+        callback(result);
+    }
+
+    pub async fn search_with_query(
+        &mut self,
+        query: String,
+        limit: Option<usize>,
+        offset: Option<usize>,
+    ) -> ResolverResult<SearchResults> {
+        let index = self.index.as_ref()
+            .ok_or(ResolverError::IndexNotSet)?;
+
+        let options = crate::r#type::SearchOptions {
+            query: Some(query),
+            limit,
+            offset,
+            ..Default::default()
+        };
+
+        let search_result = index.search(&options)?;
+        let result = search_result.results;
+        self.result = vec![result.clone()];
+
+        Ok(result)
+    }
+
+    pub async fn execute_chain(
+        &mut self,
+        operations: Vec<(String, ResolverOptions)>,
+    ) -> ResolverResult<SearchResults> {
+        let mut current = self.clone();
+
+        for (method, options) in operations {
+            let index = current.index.as_ref()
+                .ok_or(ResolverError::IndexNotSet)?;
+
+            let limit = options.limit().unwrap_or(0);
+            let offset = options.offset().unwrap_or(0);
+            let enrich = options.enrich().unwrap_or(false);
+            let resolve = options.resolve().unwrap_or(false);
+            let suggest = options.suggest().unwrap_or(false);
+
+            if let Some(query_str) = options.query().cloned() {
+                let search_options = crate::r#type::SearchOptions {
+                    query: Some(query_str),
+                    limit: Some(limit),
+                    offset: Some(offset),
+                    enrich: Some(enrich),
+                    resolve: Some(resolve),
+                    suggest: Some(suggest),
+                    boost: options.boost(),
+                    ..Default::default()
+                };
+
+                let search_result = index.search(&search_options)?;
+                let search_ids = search_result.results;
+
+                match method.as_str() {
+                    "and" => {
+                        let op_results: Vec<IntermediateSearchResults> = vec![vec![search_ids.clone()]];
+                        crate::resolver::handler::Handler::handle_and(&mut current, op_results, limit, offset, enrich, resolve);
+                    }
+                    "or" => {
+                        let op_results: Vec<IntermediateSearchResults> = vec![vec![search_ids.clone()]];
+                        crate::resolver::handler::Handler::handle_or(&mut current, op_results, limit, offset, enrich, resolve);
+                    }
+                    "not" => {
+                        let op_results: Vec<IntermediateSearchResults> = vec![vec![search_ids.clone()]];
+                        crate::resolver::handler::Handler::handle_not(&mut current, op_results, limit, offset, enrich, resolve);
+                    }
+                    "xor" => {
+                        let op_results: Vec<IntermediateSearchResults> = vec![vec![search_ids.clone()]];
+                        crate::resolver::handler::Handler::handle_xor(&mut current, op_results, limit, offset, enrich, resolve);
+                    }
+                    _ => {
+                        current.result = vec![search_ids];
+                    }
+                }
+            }
+        }
+
+        self.result = current.result;
+        Ok(self.get())
     }
 }
 

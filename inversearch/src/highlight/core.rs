@@ -284,6 +284,12 @@ pub fn highlight_document_structured(
     }
 
     let mut highlight = highlight_single_document_structured(query, &content, encoder, config)?;
+    
+    // 如果没有匹配，返回 None
+    if highlight.total_matches == 0 {
+        return Ok(None);
+    }
+    
     highlight.id = doc_id;
     highlight.fields[0].field = field_path.to_string();
 

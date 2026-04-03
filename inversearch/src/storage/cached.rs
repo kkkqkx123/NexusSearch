@@ -54,8 +54,10 @@ impl CachedStorage {
 
     /// 使用指定路径创建缓存存储
     pub fn with_path(base_path: impl Into<PathBuf>) -> Self {
-        let mut config = CachedStorageConfig::default();
-        config.base_path = base_path.into();
+        let config = CachedStorageConfig {
+            base_path: base_path.into(),
+            ..Default::default()
+        };
         Self::with_config(config)
     }
 

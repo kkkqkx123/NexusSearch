@@ -170,7 +170,7 @@ impl HighlightProcessor {
         }
 
         // Apply boundary processing if needed
-        let should_apply_boundary = config.boundary.as_ref().map_or(false, |b| {
+        let should_apply_boundary = config.boundary.as_ref().is_some_and(|b| {
             first_match_pos >= 0 || b.before.is_some() || b.after.is_some()
         });
         if should_apply_boundary {

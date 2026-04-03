@@ -97,7 +97,6 @@ pub use resolver::{
     exclusion,
     xor_op,
     combine_search_results,
-    AsyncResolver,
     Enricher,
     FieldSelector,
     TagIntegrationConfig,
