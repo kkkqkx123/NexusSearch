@@ -1,7 +1,8 @@
 use crate::r#type::{SearchResults, EnrichedSearchResults, DocId};
 use crate::error::Result;
 use crate::Index;
-use crate::storage::{StorageInfo, StorageInterface};
+use crate::storage::interface::StorageInterface;
+use crate::storage::types::StorageInfo;
 use redis::{Client as RedisClient, aio::MultiplexedConnection};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Duration, Instant};

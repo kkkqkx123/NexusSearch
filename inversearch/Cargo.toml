@@ -40,14 +40,11 @@ tempfile = "3.10"
 criterion = "0.5"
 
 [features]
-default = ["service", "cache", "async", "store", "suggestion", "keystore"]
+default = ["service", "store"]
 service = ["tonic", "prost", "tokio/full"]
-cache = []
-async = []
-store = ["store-memory"]
+store = ["store-cached"]
 store-memory = []
 store-file = []
 store-redis = ["redis"]
 store-wal = []
-suggestion = []
-keystore = []
+store-cached = []

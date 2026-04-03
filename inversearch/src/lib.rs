@@ -124,16 +124,17 @@ pub use search::{
     MultiFieldSearchConfig,
 };
 pub use serialize::*;
-pub use storage::{StorageInterface, StorageInfo};
+pub use storage::interface::StorageInterface;
+pub use storage::types::StorageInfo;
 
 #[cfg(feature = "store-memory")]
-pub use storage::MemoryStorage;
+pub use storage::memory::MemoryStorage;
 
 #[cfg(feature = "store-file")]
-pub use storage::FileStorage;
+pub use storage::file::FileStorage;
 
 #[cfg(feature = "store-wal")]
-pub use storage::WALStorage;
+pub use storage::wal_storage::WALStorage;
 
 #[cfg(feature = "store-wal")]
 pub use storage::wal::{WALManager, IndexChange};
