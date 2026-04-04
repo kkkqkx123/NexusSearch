@@ -5,8 +5,7 @@
 //! # Examples
 //!
 //! ```rust
-//! use bm25_service::config::validator::{ConfigValidator, ValidationError};
-//! use bm25_service::config::IndexManagerConfig;
+//! use bm25_service::config::{ConfigValidator, IndexManagerConfig};
 //!
 //! let config = IndexManagerConfig::builder()
 //!     .writer_memory_mb(100)
@@ -14,7 +13,7 @@
 //!     .build();
 //!
 //! // Validate configuration
-//! config.validate()?;
+//! config.validate().expect("Config should be valid");
 //! ```
 
 use std::error::Error;
