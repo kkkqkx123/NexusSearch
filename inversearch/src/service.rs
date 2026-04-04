@@ -18,8 +18,8 @@ use crate::{Index, SearchOptions};
 // Import storage module
 use crate::storage::common::r#trait::StorageInterface;
 
-#[cfg(feature = "store-memory")]
-use crate::storage::memory::MemoryStorage;
+#[cfg(feature = "store-cold-warm-cache")]
+use crate::storage::cold_warm_cache::ColdWarmCacheManager;
 
 #[cfg(feature = "store-file")]
 use crate::storage::file::FileStorage;
@@ -30,13 +30,10 @@ use crate::storage::redis::{RedisStorage, RedisStorageConfig};
 #[cfg(feature = "store-wal")]
 use crate::storage::wal_storage::WALStorage;
 
-#[cfg(feature = "store-cached")]
-use crate::storage::cached::CachedStorage;
-
 // Import config
 use crate::config::Config;
+use crate::config::StorageBackend;
 #[cfg(any(
-    feature = "store-memory",
     feature = "store-file",
     feature = "store-redis",
     feature = "store-wal"
@@ -52,17 +49,23 @@ use crate::index::IndexOptions;
 /// Create storage based on configuration
 pub async fn create_storage_from_config(
     config: &Config,
-) -> Arc<RwLock<dyn StorageInterface + Send + Sync>> {
+) -> Arc<dyn StorageInterface + Send + Sync> {
     if !config.storage.enabled {
-        #[cfg(feature = "store-cached")]
-        return Arc::new(RwLock::new(CachedStorage::new()));
-        #[cfg(not(feature = "store-cached"))]
+        // 存储未启用时，默认使用冷热缓存
+        #[cfg(feature = "store-cold-warm-cache")]
+        {
+            return tokio::task::block_in_place(|| {
+                tokio::runtime::Handle::current().block_on(async {
+                    let manager = ColdWarmCacheManager::new().await.unwrap();
+                    manager as Arc<dyn StorageInterface + Send + Sync>
+                })
+            });
+        }
+        #[cfg(not(feature = "store-cold-warm-cache"))]
         panic!("No storage backend enabled");
     }
 
     match &config.storage.backend {
-        #[cfg(feature = "store-memory")]
-        StorageBackend::Memory => Arc::new(RwLock::new(MemoryStorage::new())),
         #[cfg(feature = "store-file")]
         StorageBackend::File => {
             let file_config = config
@@ -71,7 +74,7 @@ pub async fn create_storage_from_config(
                 .as_ref()
                 .map(|c| c.base_path.clone())
                 .unwrap_or_else(|| "./data".to_string());
-            Arc::new(RwLock::new(FileStorage::new(file_config)))
+            Arc::new(FileStorage::new(file_config))
         }
         #[cfg(feature = "store-redis")]
         StorageBackend::Redis => {
@@ -86,15 +89,22 @@ pub async fn create_storage_from_config(
                 })
                 .unwrap_or_default();
             match RedisStorage::new(redis_config).await {
-                Ok(storage) => Arc::new(RwLock::new(storage)),
+                Ok(storage) => Arc::new(storage),
                 Err(e) => {
                     eprintln!(
-                        "Failed to connect to Redis: {}, falling back to cached storage",
+                        "Failed to connect to Redis: {}, falling back to cold-warm cache",
                         e
                     );
-                    #[cfg(feature = "store-cached")]
-                    return Arc::new(RwLock::new(CachedStorage::new()));
-                    #[cfg(not(feature = "store-cached"))]
+                    #[cfg(feature = "store-cold-warm-cache")]
+                    {
+                        return tokio::task::block_in_place(|| {
+                            tokio::runtime::Handle::current().block_on(async {
+                                let manager = ColdWarmCacheManager::new().await.unwrap();
+                                manager as Arc<dyn StorageInterface + Send + Sync>
+                            })
+                        });
+                    }
+                    #[cfg(not(feature = "store-cold-warm-cache"))]
                     panic!("No fallback storage available");
                 }
             }
@@ -113,34 +123,14 @@ pub async fn create_storage_from_config(
                     ..Default::default()
                 })
                 .unwrap_or_default();
-            match WALStorage::new(wal_config).await {
-                Ok(storage) => Arc::new(RwLock::new(storage)),
-                Err(e) => {
-                    eprintln!(
-                        "Failed to initialize WAL storage: {}, falling back to cached storage",
-                        e
-                    );
-                    #[cfg(feature = "store-cached")]
-                    return Arc::new(RwLock::new(CachedStorage::new()));
-                    #[cfg(not(feature = "store-cached"))]
-                    panic!("No fallback storage available");
-                }
-            }
+            Arc::new(WALStorage::new(wal_config))
         }
-        #[cfg(not(any(
-            feature = "store-memory",
-            feature = "store-file",
-            feature = "store-redis",
-            feature = "store-wal"
-        )))]
-        _ => {
-            // 默认使用缓存存储
-            #[cfg(feature = "store-cached")]
-            {
-                Arc::new(RwLock::new(CachedStorage::new()))
-            }
-            #[cfg(not(feature = "store-cached"))]
-            panic!("No storage backend enabled");
+        StorageBackend::ColdWarmCache => {
+            // ColdWarmCacheManager 已经是 Arc<Self> 且实现了 StorageInterface
+            // 直接返回即可，不需要额外的 RwLock 包装
+            let manager = ColdWarmCacheManager::new().await.unwrap();
+            // 将 Arc<ColdWarmCacheManager> 转换为 Arc<dyn StorageInterface + Send + Sync>
+            manager as Arc<dyn StorageInterface + Send + Sync>
         }
     }
 }
@@ -149,7 +139,7 @@ pub async fn create_storage_from_config(
 pub struct InversearchService {
     index: Arc<RwLock<Index>>,
     #[allow(dead_code)]
-    storage: Arc<RwLock<dyn StorageInterface + Send + Sync>>,
+    storage: Arc<dyn StorageInterface + Send + Sync>,
     config: Config,
 }
 
@@ -184,11 +174,16 @@ impl InversearchService {
         let index = Index::new(IndexOptions::default()).expect("Failed to create index");
         let index = Arc::new(RwLock::new(index));
 
-        #[cfg(feature = "store-cached")]
-        let storage: Arc<RwLock<dyn StorageInterface + Send + Sync>> =
-            Arc::new(RwLock::new(CachedStorage::new()));
-        #[cfg(not(feature = "store-cached"))]
-        let storage: Arc<RwLock<dyn StorageInterface + Send + Sync>> =
+        #[cfg(feature = "store-cold-warm-cache")]
+        let storage: Arc<dyn StorageInterface + Send + Sync> =
+            tokio::task::block_in_place(|| {
+                tokio::runtime::Handle::current().block_on(async {
+                    let manager = ColdWarmCacheManager::new().await.unwrap();
+                    manager as Arc<dyn StorageInterface + Send + Sync>
+                })
+            });
+        #[cfg(not(feature = "store-cold-warm-cache"))]
+        let storage: Arc<dyn StorageInterface + Send + Sync> =
             panic!("No storage backend enabled");
 
         Self {
@@ -202,7 +197,7 @@ impl InversearchService {
     pub fn with_storage<S: StorageInterface + Send + Sync + 'static>(storage: S) -> Self {
         let index = Index::new(IndexOptions::default()).expect("Failed to create index");
         let index = Arc::new(RwLock::new(index));
-        let storage = Arc::new(RwLock::new(storage));
+        let storage = Arc::new(storage);
 
         Self {
             index,
@@ -218,7 +213,7 @@ impl InversearchService {
     ) -> Self {
         let index = Index::new(IndexOptions::default()).expect("Failed to create index");
         let index = Arc::new(RwLock::new(index));
-        let storage = Arc::new(RwLock::new(storage));
+        let storage = Arc::new(storage);
 
         Self {
             index,

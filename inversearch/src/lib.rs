@@ -73,9 +73,6 @@ pub use serialize::*;
 pub use storage::common::r#trait::StorageInterface;
 pub use storage::common::types::StorageInfo;
 
-#[cfg(feature = "store-memory")]
-pub use storage::memory::MemoryStorage;
-
 #[cfg(feature = "store-file")]
 pub use storage::file::FileStorage;
 
@@ -87,6 +84,10 @@ pub use storage::wal::{IndexChange, WALManager};
 
 #[cfg(feature = "store-wal")]
 pub use config::WALConfig as StorageWALConfig;
+
+pub use storage::cold_warm_cache::{
+    ColdWarmCacheConfig, ColdWarmCacheManager,
+};
 
 pub use async_::*;
 // Export specific types from r#type module to avoid conflicts

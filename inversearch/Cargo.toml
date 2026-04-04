@@ -30,6 +30,7 @@ ahash = "0.8"
 bumpalo = "3.16"
 lz4_flex = "0.11"
 ciborium = "0.2"
+dashmap = "6.1"
 
 [build-dependencies]
 prost-build = "0.13"
@@ -42,9 +43,8 @@ criterion = "0.5"
 [features]
 default = ["service", "store"]
 service = ["tonic", "prost", "tokio/full"]
-store = ["store-cached"]
-store-memory = []
+store = ["store-cold-warm-cache"]
+store-cold-warm-cache = []
 store-file = []
 store-redis = ["redis"]
 store-wal = []
-store-cached = []

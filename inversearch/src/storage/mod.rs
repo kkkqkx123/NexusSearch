@@ -6,32 +6,34 @@
 //!
 //! ```text
 //! storage/
-//! ├── common/         # 公共组件（类型、trait、工具函数）
-//! │   ├── types.rs    # 共享类型定义
-//! │   ├── trait.rs    # 存储接口 trait
-//! │   ├── io.rs       # 文件 I/O 操作
-//! │   ├── compression.rs  # 压缩/解压缩
-//! │   └── metrics.rs  # 性能指标
-//! ├── base.rs         # 存储基类
-//! ├── utils.rs        # 工具函数
-//! ├── memory.rs       # 内存存储实现
-//! ├── file.rs         # 文件存储实现
-//! ├── cached.rs       # 缓存存储实现
-//! ├── redis.rs        # Redis 存储实现
-//! └── wal/            # WAL 模块
-//!     ├── mod.rs
-//!     ├── log.rs      # 日志管理
-//!     ├── snapshot.rs # 快照管理
-//!     └── cleanup.rs  # 清理任务
+//! ├── common/              # 公共组件（类型、trait、工具函数）
+//! │   ├── types.rs         # 共享类型定义
+//! │   ├── trait.rs         # 存储接口 trait
+//! │   ├── io.rs            # 文件 I/O 操作
+//! │   ├── compression.rs   # 压缩/解压缩
+//! │   └── metrics.rs       # 性能指标
+//! ├── base.rs              # 存储基类
+//! ├── utils.rs             # 工具函数
+//! ├── file.rs              # 文件存储实现
+//! ├── redis.rs             # Redis 存储实现
+//! ├── wal.rs               # WAL 模块
+//! ├── wal_storage.rs       # WAL 存储实现
+//! ├── cold_warm_cache/     # 冷热缓存存储实现（默认）
+//! │   ├── mod.rs
+//! │   ├── config.rs
+//! │   ├── manager.rs
+//! │   ├── policy.rs
+//! │   ├── stats.rs
+//! │   └── background.rs
+//! └── memory.rs            # 内存存储实现（仅用于测试）
 //! ```
 //!
 //! ## 条件编译特性
 //!
-//! - `store-memory`: 内存存储
-//! - `store-file`: 文件存储（默认启用）
+//! - `store-cold-warm-cache`: 冷热缓存存储（默认启用）
+//! - `store-file`: 文件存储
 //! - `store-redis`: Redis 存储
 //! - `store-wal`: WAL 预写日志存储
-//! - `store-cached`: 缓存存储（内存+文件，默认启用）
 
 // 公共组件 - 所有存储实现共享
 pub mod common;
@@ -43,8 +45,6 @@ pub mod base;
 pub mod utils;
 
 // 条件编译的存储实现
-#[cfg(feature = "store-memory")]
-pub mod memory;
 
 #[cfg(feature = "store-file")]
 pub mod file;
@@ -58,8 +58,12 @@ pub mod wal;
 #[cfg(feature = "store-wal")]
 pub mod wal_storage;
 
-#[cfg(feature = "store-cached")]
-pub mod cached;
+// 冷热缓存存储实现（默认）
+pub mod cold_warm_cache;
+
+// 测试用内存存储（仅用于测试）
+#[cfg(test)]
+mod memory;
 
 // 重新导出常用类型和 trait，方便使用
 pub use common::{

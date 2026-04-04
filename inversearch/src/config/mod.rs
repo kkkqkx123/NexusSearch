@@ -82,7 +82,7 @@ impl Default for StorageConfig {
     fn default() -> Self {
         StorageConfig {
             enabled: false,
-            backend: StorageBackend::Memory,
+            backend: StorageBackend::ColdWarmCache,
             #[cfg(feature = "store-redis")]
             redis: None,
             #[cfg(feature = "store-file")]
@@ -96,13 +96,13 @@ impl Default for StorageConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum StorageBackend {
-    Memory,
     #[cfg(feature = "store-file")]
     File,
     #[cfg(feature = "store-redis")]
     Redis,
     #[cfg(feature = "store-wal")]
     Wal,
+    ColdWarmCache,
 }
 
 #[cfg(feature = "store-redis")]
