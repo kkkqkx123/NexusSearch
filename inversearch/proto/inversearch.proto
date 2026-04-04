@@ -9,6 +9,9 @@ service InversearchService {
   rpc Search(SearchRequest) returns (SearchResponse);
   rpc ClearIndex(ClearIndexRequest) returns (ClearIndexResponse);
   rpc GetStats(GetStatsRequest) returns (GetStatsResponse);
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+  rpc BatchOperation(BatchOperationRequest) returns (BatchOperationResponse);
+  rpc Suggest(SuggestRequest) returns (SuggestResponse);
 }
 
 message AddDocumentRequest {
@@ -120,4 +123,45 @@ message GetStatsResponse {
   uint64 index_size = 2;
   uint64 cache_size = 3;
   string error = 4;
+}
+
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+  bool healthy = 1;
+  uint64 document_count = 2;
+  uint64 uptime_seconds = 3;
+  string version = 4;
+}
+
+message BatchOperationRequest {
+  message Document {
+    uint64 id = 1;
+    string content = 2;
+  }
+  
+  message Operation {
+    uint32 operation_type = 1;
+    uint64 document_id = 2;
+    Document document = 3;
+  }
+  
+  repeated Operation operations = 1;
+}
+
+message BatchOperationResponse {
+  uint32 success_count = 1;
+  uint32 failed_count = 2;
+  repeated string errors = 3;
+}
+
+message SuggestRequest {
+  string query = 1;
+  uint32 limit = 2;
+}
+
+message SuggestResponse {
+  repeated string suggestions = 1;
+  uint32 total = 2;
+  string error = 3;
 }

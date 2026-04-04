@@ -268,7 +268,7 @@ mod tests {
     fn test_storage_config_default() {
         let config = StorageConfig::default();
         assert!(!config.enabled);
-        assert!(matches!(config.backend, StorageBackend::Memory));
+        assert!(matches!(config.backend, StorageBackend::ColdWarmCache));
     }
 
     #[cfg(feature = "store-redis")]

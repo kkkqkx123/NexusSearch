@@ -3,8 +3,17 @@ name = "inversearch-service"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+name = "inversearch_service"
+path = "src/lib.rs"
+
+[[bin]]
+name = "inversearch-server"
+path = "src/main.rs"
+required-features = ["service"]
+
 [dependencies]
-tokio = { version = "1.48", features = ["full"] }
+tokio = { version = "1.48", features = ["rt-multi-thread", "macros"] }
 tonic = { version = "0.12", optional = true }
 prost = { version = "0.13", optional = true }
 redis = { version = "0.29", features = ["tokio-comp", "connection-manager", "aio"], optional = true }
@@ -23,7 +32,7 @@ linked-hash-map = "0.5"
 lazy_static = "1.4"
 lru = "0.12"
 unicode-normalization = "0.1"
-async-trait = "0.1"
+async-trait = { version = "0.1", optional = true }
 zstd = "0.13"
 base64 = "0.22"
 ahash = "0.8"
@@ -33,16 +42,17 @@ ciborium = "0.2"
 dashmap = "6.1"
 
 [build-dependencies]
-prost-build = "0.13"
-tonic-build = "0.12"
+prost-build = { version = "0.13", optional = true }
+tonic-build = { version = "0.12", optional = true }
 
 [dev-dependencies]
 tempfile = "3.10"
 criterion = "0.5"
 
 [features]
-default = ["service", "store"]
-service = ["tonic", "prost", "tokio/full"]
+default = ["embedded", "store"]
+embedded = []
+service = ["tonic", "prost", "tokio/full", "async-trait", "prost-build", "tonic-build"]
 store = ["store-cold-warm-cache"]
 store-cold-warm-cache = []
 store-file = []

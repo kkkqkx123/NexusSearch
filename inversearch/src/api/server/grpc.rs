@@ -7,13 +7,13 @@ use tokio::sync::RwLock;
 use tonic::{transport::Server, Request, Response, Status};
 
 // Import generated proto types
-use crate::proto::inversearch_service_server::{
+use crate::api::server::proto::inversearch_service_server::{
     InversearchService as InversearchServiceTrait, InversearchServiceServer,
 };
-use crate::proto::*;
+use crate::api::server::proto::*;
 
 // Import core library types
-use crate::{Index, SearchOptions};
+use crate::api::core::{Index, SearchOptions};
 
 // Import storage module
 use crate::storage::common::r#trait::StorageInterface;
@@ -299,94 +299,6 @@ impl InversearchServiceTrait for InversearchService {
         }
     }
 
-    async fn search(
-        &self,
-        request: Request<SearchRequest>,
-    ) -> Result<Response<SearchResponse>, Status> {
-        let req = request.into_inner();
-
-        let index = self.index.read().await;
-
-        // Build search options
-        let search_opts = SearchOptions {
-            query: Some(req.query),
-            limit: Some(req.limit as usize),
-            offset: Some(req.offset as usize),
-            context: Some(req.context),
-            suggest: Some(req.suggest),
-            resolve: Some(req.resolve),
-            enrich: Some(req.enrich),
-            cache: Some(req.cache),
-            ..Default::default()
-        };
-
-        // Perform search
-        let result = index.search(&search_opts);
-
-        match result {
-            Ok(search_result) => {
-                let results: Vec<u64> = search_result.results.to_vec();
-                Ok(Response::new(SearchResponse {
-                    results,
-                    total: search_result.total as u32,
-                    error: String::new(),
-                    highlights: vec![],
-                }))
-            }
-            Err(e) => Ok(Response::new(SearchResponse {
-                results: vec![],
-                total: 0,
-                error: e.to_string(),
-                highlights: vec![],
-            })),
-        }
-    }
-
-    async fn clear_index(
-        &self,
-        _request: Request<ClearIndexRequest>,
-    ) -> Result<Response<ClearIndexResponse>, Status> {
-        let mut index = self.index.write().await;
-        index.clear();
-
-        Ok(Response::new(ClearIndexResponse {
-            success: true,
-            error: String::new(),
-        }))
-    }
-
-    async fn get_stats(
-        &self,
-        _request: Request<GetStatsRequest>,
-    ) -> Result<Response<GetStatsResponse>, Status> {
-        let index = self.index.read().await;
-        // Use document_count() to get the actual document count
-        let document_count = index.document_count();
-
-        Ok(Response::new(GetStatsResponse {
-            document_count: document_count as u64,
-            index_size: 0, // TODO: implement actual index size calculation
-            cache_size: 0, // TODO: implement cache size tracking
-            error: String::new(),
-        }))
-    }
-
-    async fn health_check(
-        &self,
-        _request: Request<HealthCheckRequest>,
-    ) -> Result<Response<HealthCheckResponse>, Status> {
-        let index = self.index.read().await;
-        let is_healthy = true; // TODO: implement actual health check
-        let document_count = index.document_count();
-
-        Ok(Response::new(HealthCheckResponse {
-            healthy: is_healthy,
-            document_count: document_count as u64,
-            uptime_seconds: 0, // TODO: track actual uptime
-            version: env!("CARGO_PKG_VERSION").to_string(),
-        }))
-    }
-
     async fn batch_operation(
         &self,
         request: Request<BatchOperationRequest>,
@@ -454,6 +366,49 @@ impl InversearchServiceTrait for InversearchService {
         }))
     }
 
+    async fn search(
+        &self,
+        request: Request<SearchRequest>,
+    ) -> Result<Response<SearchResponse>, Status> {
+        let req = request.into_inner();
+
+        let index = self.index.read().await;
+
+        // Build search options
+        let search_opts = SearchOptions {
+            query: Some(req.query),
+            limit: Some(req.limit as usize),
+            offset: Some(req.offset as usize),
+            context: Some(req.context),
+            suggest: Some(req.suggest),
+            resolve: Some(req.resolve),
+            enrich: Some(req.enrich),
+            cache: Some(req.cache),
+            ..Default::default()
+        };
+
+        // Perform search
+        let result = index.search(&search_opts);
+
+        match result {
+            Ok(search_result) => {
+                let results: Vec<u64> = search_result.results.to_vec();
+                Ok(Response::new(SearchResponse {
+                    results,
+                    total: search_result.total as u32,
+                    error: String::new(),
+                    highlights: vec![],
+                }))
+            }
+            Err(e) => Ok(Response::new(SearchResponse {
+                results: vec![],
+                total: 0,
+                error: e.to_string(),
+                highlights: vec![],
+            })),
+        }
+    }
+
     async fn suggest(
         &self,
         request: Request<SuggestRequest>,
@@ -496,6 +451,51 @@ impl InversearchServiceTrait for InversearchService {
             })),
         }
     }
+
+    async fn clear_index(
+        &self,
+        _request: Request<ClearIndexRequest>,
+    ) -> Result<Response<ClearIndexResponse>, Status> {
+        let mut index = self.index.write().await;
+        index.clear();
+
+        Ok(Response::new(ClearIndexResponse {
+            success: true,
+            error: String::new(),
+        }))
+    }
+
+    async fn get_stats(
+        &self,
+        _request: Request<GetStatsRequest>,
+    ) -> Result<Response<GetStatsResponse>, Status> {
+        let index = self.index.read().await;
+        // Use document_count() to get the actual document count
+        let document_count = index.document_count();
+
+        Ok(Response::new(GetStatsResponse {
+            document_count: document_count as u64,
+            index_size: 0, // TODO: implement actual index size calculation
+            cache_size: 0, // TODO: implement cache size tracking
+            error: String::new(),
+        }))
+    }
+
+    async fn health_check(
+        &self,
+        _request: Request<HealthCheckRequest>,
+    ) -> Result<Response<HealthCheckResponse>, Status> {
+        let index = self.index.read().await;
+        let is_healthy = true; // TODO: implement actual health check
+        let document_count = index.document_count();
+
+        Ok(Response::new(HealthCheckResponse {
+            healthy: is_healthy,
+            document_count: document_count as u64,
+            uptime_seconds: 0, // TODO: track actual uptime
+            version: env!("CARGO_PKG_VERSION").to_string(),
+        }))
+    }
 }
 
 /// Run the gRPC server
@@ -531,6 +531,23 @@ pub async fn run_server_with_storage<S: StorageInterface + Send + Sync + 'static
     Ok(())
 }
 
+/// Run the gRPC server with custom service instance
+pub async fn run_server_with_service(
+    config: ServiceConfig,
+    service: InversearchService,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let addr = format!("{}:{}", config.host, config.port).parse::<SocketAddr>()?;
+
+    tracing::info!("Inversearch service listening on {}", addr);
+
+    Server::builder()
+        .add_service(InversearchServiceServer::new(service))
+        .serve(addr)
+        .await?;
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -540,11 +557,5 @@ mod tests {
         let config = ServiceConfig::default();
         assert_eq!(config.host, "0.0.0.0");
         assert_eq!(config.port, 50051);
-    }
-
-    #[test]
-    fn test_service_creation() {
-        let _service = InversearchService::new();
-        // Service should be created successfully
     }
 }

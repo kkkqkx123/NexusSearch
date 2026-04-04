@@ -62,8 +62,7 @@ pub mod wal_storage;
 pub mod cold_warm_cache;
 
 // 测试用内存存储（仅用于测试）
-#[cfg(test)]
-mod memory;
+pub mod memory;
 
 // 重新导出常用类型和 trait，方便使用
 pub use common::{
