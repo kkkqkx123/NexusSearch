@@ -9,6 +9,53 @@ pool_size = 10
 data_dir = "./data"
 index_path = "./index"
 
+# === Tantivy Index Manager Configuration ===
+# 索引管理器配置，控制 Tantivy 的写入、读取和合并行为
+
+[index.manager]
+# 写入器内存预算（字节）
+# - 影响索引速度和内存使用
+# - 建议值：10MB-500MB
+# - 可通过环境变量 INDEX_WRITER_MEMORY_MB 覆盖
+writer_memory_budget = 50000000  # 50MB
+
+# 写入器线程数
+# - None 或 0 表示自动检测 CPU 核心数
+# - 可通过环境变量 INDEX_WRITER_THREADS 覆盖
+writer_num_threads = 0
+
+# 是否启用 Reader 缓存
+# - 启用后相同 Reader 会被复用，提高查询性能
+# - 可通过环境变量 INDEX_READER_CACHE 覆盖
+reader_cache_enabled = true
+
+# Reader 重载策略
+# - manual: 手动重载
+# - on_commit_with_delay: 提交后延迟重载（默认，推荐）
+reader_reload_policy = "on_commit_with_delay"
+
+# 合并策略类型
+# - log: 对数合并策略（默认，推荐）
+# - no_merge: 不合并（仅用于测试）
+merge_policy = "log"
+
+# LogMergePolicy 详细配置
+[index.manager.log_merge_policy]
+# 最小合并段数
+min_num_segments = 8
+
+# 合并前最大文档数
+max_docs_before_merge = 10000000
+
+# 最小层大小
+min_layer_size = 10000
+
+# 层大小对数比率
+level_log_size = 0.75
+
+# 合并前删除文档比率
+del_docs_ratio_before_merge = 1.0
+
 [bm25]
 k1 = 1.2
 b = 0.75

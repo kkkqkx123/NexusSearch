@@ -1,4 +1,5 @@
 use crate::config::{Bm25Config, SearchConfig};
+use crate::index::manager::IndexManagerConfig;
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 
@@ -23,16 +24,21 @@ pub struct RedisConfig {
     pub pool_size: u32,
 }
 
+/// Index configuration with Tantivy settings
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IndexConfig {
     pub data_dir: String,
     pub index_path: String,
+    /// Tantivy index manager configuration
+    #[serde(default)]
+    pub manager: IndexManagerConfig,
 }
 
 impl Config {
     pub fn from_file(path: &str) -> anyhow::Result<Self> {
         let content = std::fs::read_to_string(path)?;
         let config: Config = toml::from_str(&content)?;
+        config.validate()?;
         Ok(config)
     }
 
@@ -44,6 +50,11 @@ impl Config {
         let data_dir = std::env::var("DATA_DIR").unwrap_or_else(|_| "./data".to_string());
         let index_path = std::env::var("INDEX_PATH").unwrap_or_else(|_| "./index".to_string());
 
+        // Index manager config from env using new loader
+        let manager_config = IndexManagerConfig::from_env_with_prefix("INDEX_")
+            .unwrap_or_else(|_| IndexManagerConfig::default());
+
+        // BM25 config from env
         let mut bm25_config = Bm25Config::default();
         if let Ok(k1) = std::env::var("BM25_K1") {
             bm25_config.k1 = k1.parse().unwrap_or(1.2);
@@ -61,6 +72,7 @@ impl Config {
             bm25_config.field_weights.content = content_weight.parse().unwrap_or(1.0);
         }
 
+        // Search config from env
         let mut search_config = SearchConfig::default();
         if let Ok(default_limit) = std::env::var("SEARCH_DEFAULT_LIMIT") {
             search_config.default_limit = default_limit.parse().unwrap_or(10);
@@ -75,7 +87,7 @@ impl Config {
             search_config.highlight_fragment_size = highlight_fragment_size.parse().unwrap_or(200);
         }
 
-        Ok(Config {
+        let config = Config {
             server: ServerConfig {
                 address: server_address.parse()?,
             },
@@ -86,10 +98,35 @@ impl Config {
             index: IndexConfig {
                 data_dir,
                 index_path,
+                manager: manager_config,
             },
             bm25: bm25_config,
             search: search_config,
-        })
+        };
+
+        config.validate()?;
+        Ok(config)
+    }
+
+    /// Validate configuration
+    pub fn validate(&self) -> anyhow::Result<()> {
+        // Validate writer memory budget
+        if self.index.manager.writer_memory_budget < 1_000_000 {
+            return Err(anyhow::anyhow!(
+                "writer memory budget must be at least 1MB, got {} bytes",
+                self.index.manager.writer_memory_budget
+            ));
+        }
+
+        // Validate BM25 parameters
+        if self.bm25.k1 < 0.0 {
+            return Err(anyhow::anyhow!("BM25 k1 must be non-negative"));
+        }
+        if !(0.0..=1.0).contains(&self.bm25.b) {
+            return Err(anyhow::anyhow!("BM25 b must be in range [0, 1]"));
+        }
+
+        Ok(())
     }
 }
 
@@ -108,6 +145,7 @@ impl Default for Config {
             index: IndexConfig {
                 data_dir: "./data".to_string(),
                 index_path: "./index".to_string(),
+                manager: IndexManagerConfig::default(),
             },
             bm25: Bm25Config::default(),
             search: SearchConfig::default(),

@@ -13,36 +13,44 @@ path = "src/main.rs"
 required-features = ["service"]
 
 [features]
-default = []
-service = ["tonic", "prost", "tokio/full", "redis", "tracing", "tracing-subscriber", "metrics", "toml"]
-cache = []
+default = ["embedded"]
+embedded = []
+service = [
+    "tonic",
+    "prost",
+    "tokio/full",
+    "redis",
+    "tracing",
+    "tracing-subscriber",
+    "metrics",
+    "prost-build",
+    "tonic-build",
+]
 
 [dependencies]
-# Core dependencies (always compiled)
 tantivy = "0.24"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+serde_yaml = "0.9"
 chrono = { version = "0.4", features = ["serde"] }
 anyhow = "1.0"
 thiserror = "1.0"
+num_cpus = "1.16"
+toml = "0.8"
 
-# Async runtime (minimal for library mode)
 tokio = { version = "1.48", features = ["rt-multi-thread", "macros"] }
 
-# Service dependencies (optional)
 tonic = { version = "0.12", optional = true }
 prost = { version = "0.13", optional = true }
 redis = { version = "1.0", features = ["tokio-comp", "connection-manager"], optional = true }
 
-# Feature dependencies (optional)
 tracing = { version = "0.1", optional = true }
 tracing-subscriber = { version = "0.3", features = ["env-filter"], optional = true }
 metrics = { version = "0.23", optional = true }
-toml = { version = "0.8", optional = true }
 
 [build-dependencies]
-prost-build = "0.13"
-tonic-build = "0.12"
+prost-build = { version = "0.13", optional = true }
+tonic-build = { version = "0.12", optional = true }
 
 [dev-dependencies]
 tempfile = "3.10"

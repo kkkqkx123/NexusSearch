@@ -19,6 +19,9 @@ pub enum Bm25Error {
     #[error("Tantivy error: {0}")]
     TantivyError(#[from] tantivy::TantivyError),
 
+    #[error("Query parser error: {0}")]
+    QueryParserError(#[from] tantivy::query::QueryParserError),
+
     #[error("Serialization error: {0}")]
     SerializationError(#[from] serde_json::Error),
 

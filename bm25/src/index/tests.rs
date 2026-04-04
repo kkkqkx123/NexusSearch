@@ -63,6 +63,9 @@ mod test_module {
         );
 
         let result = add_document(&manager, &schema, "1", &fields);
+        if let Err(ref e) = result {
+            eprintln!("Error adding document: {:?}", e);
+        }
         assert!(result.is_ok());
 
         let writer = manager.writer();
