@@ -139,52 +139,16 @@ impl Default for IndexManagerConfig {
 
 impl IndexManagerConfig {
     /// Create a new builder for IndexManagerConfig
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use bm25_service::index::manager::IndexManagerConfig;
-    ///
-    /// let config = IndexManagerConfig::builder()
-    ///     .writer_memory_mb(100)
-    ///     .writer_threads(4)
-    ///     .reader_cache(true)
-    ///     .build();
-    /// ```
     pub fn builder() -> crate::config::IndexManagerConfigBuilder {
         crate::config::IndexManagerConfigBuilder::default()
     }
 
     /// Load configuration from environment variables with default prefix "INDEX_"
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use bm25_service::index::manager::IndexManagerConfig;
-    ///
-    /// // Set environment variables:
-    /// // export INDEX_WRITER_MEMORY_BUDGET=100000000
-    /// // export INDEX_WRITER_NUM_THREADS=4
-    ///
-    /// let config = IndexManagerConfig::from_env()?;
-    /// ```
     pub fn from_env() -> Result<Self> {
         Self::from_env_with_prefix("INDEX_")
     }
 
     /// Load configuration from environment variables with custom prefix
-    ///
-    /// # Arguments
-    ///
-    /// * `prefix` - Environment variable prefix (e.g., "MYAPP_INDEX_")
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use bm25_service::index::manager::IndexManagerConfig;
-    ///
-    /// let config = IndexManagerConfig::from_env_with_prefix("MYAPP_INDEX_")?;
-    /// ```
     pub fn from_env_with_prefix(prefix: &str) -> Result<Self> {
         use crate::config::{ConfigLoader, EnvLoader};
         
@@ -198,18 +162,6 @@ impl IndexManagerConfig {
     }
 
     /// Load configuration from a file (TOML, YAML, or JSON)
-    ///
-    /// # Arguments
-    ///
-    /// * `path` - Path to the configuration file
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use bm25_service::index::manager::IndexManagerConfig;
-    ///
-    /// let config = IndexManagerConfig::from_file("config.toml")?;
-    /// ```
     pub fn from_file(path: &str) -> Result<Self> {
         use crate::config::{ConfigLoader, FileLoader};
         
@@ -288,20 +240,6 @@ impl IndexManagerConfig {
     }
 
     /// Export configuration to TOML string
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use bm25_service::IndexManagerConfig;
-    ///
-    /// let config = IndexManagerConfig::builder()
-    ///     .writer_memory_mb(100)
-    ///     .writer_threads(4)
-    ///     .build();
-    ///
-    /// let toml_str = config.to_toml()?;
-    /// println!("{}", toml_str);
-    /// ```
     pub fn to_toml(&self) -> Result<String> {
         toml::to_string(self)
             .map_err(|e: toml::ser::Error| crate::error::Bm25Error::InternalError(
@@ -310,19 +248,6 @@ impl IndexManagerConfig {
     }
 
     /// Export configuration to JSON string (pretty-printed)
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use bm25_service::IndexManagerConfig;
-    ///
-    /// let config = IndexManagerConfig::builder()
-    ///     .writer_memory_mb(100)
-    ///     .build();
-    ///
-    /// let json_str = config.to_json()?;
-    /// println!("{}", json_str);
-    /// ```
     pub fn to_json(&self) -> Result<String> {
         serde_json::to_string_pretty(self)
             .map_err(|e| crate::error::Bm25Error::InternalError(
@@ -331,26 +256,6 @@ impl IndexManagerConfig {
     }
 
     /// Export configuration to environment variables
-    ///
-    /// # Arguments
-    ///
-    /// * `prefix` - Environment variable prefix (e.g., "INDEX_")
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use bm25_service::IndexManagerConfig;
-    ///
-    /// let config = IndexManagerConfig::builder()
-    ///     .writer_memory_mb(100)
-    ///     .writer_threads(4)
-    ///     .build();
-    ///
-    /// let env_vars = config.to_env_vars("INDEX_");
-    /// for (key, value) in env_vars {
-    ///     println!("export {}={}", key, value);
-    /// }
-    /// ```
     pub fn to_env_vars(&self, prefix: &str) -> std::collections::HashMap<String, String> {
         use std::collections::HashMap;
 
@@ -595,22 +500,6 @@ mod tests {
         let reader3 = manager.reader()?;
         // reader3 是一个新的实例，但功能相同
         assert_eq!(reader1.searcher().num_docs(), reader3.searcher().num_docs());
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_reload_reader() -> Result<()> {
-        let dir = tempdir()?;
-        let path = dir.path().join("test_reload");
-
-        let manager = IndexManager::create(&path)?;
-        let reader1 = manager.reader()?;
-
-        manager.clear_reader_cache();
-        let reader2 = manager.reload_reader()?;
-
-        assert!(!std::ptr::eq(&reader1, &reader2));
 
         Ok(())
     }

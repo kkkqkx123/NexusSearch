@@ -2,10 +2,10 @@
 //!
 //! 测试全文搜索、分页、高亮等搜索功能
 
-use bm25_service::index::{
+use bm25_service::api::core::{
     IndexManager, IndexSchema,
     batch::batch_add_documents,
-    search::{search, SearchOptions}
+    search::{search, SearchOptions},
 };
 use std::collections::HashMap;
 use tempfile::TempDir;

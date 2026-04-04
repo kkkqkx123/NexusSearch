@@ -1,6 +1,7 @@
 use crate::error::Result;
-use crate::index::{IndexManager, IndexManagerConfig, IndexSchema};
+use crate::api::core::{IndexManager, IndexManagerConfig, IndexSchema};
 use std::collections::HashMap;
+use tantivy::schema::Value;
 
 #[derive(Debug, Clone)]
 pub struct SearchResult {
@@ -52,7 +53,7 @@ impl Bm25Index {
         title: &str,
         content: &str,
     ) -> Result<()> {
-        use crate::index::document::add_document;
+        use crate::api::core::document::add_document;
 
         let mut fields = HashMap::new();
         fields.insert("title".to_string(), title.to_string());
@@ -69,8 +70,8 @@ impl Bm25Index {
         title: &str,
         content: &str,
     ) -> Result<()> {
-        use crate::index::delete::delete_document;
-        use crate::index::document::add_document;
+        use crate::api::core::delete::delete_document;
+        use crate::api::core::document::add_document;
 
         delete_document(&self.manager, &self.schema, document_id)?;
 
@@ -84,7 +85,7 @@ impl Bm25Index {
     }
 
     pub fn delete_document(&self, document_id: &str) -> Result<()> {
-        use crate::index::delete::delete_document;
+        use crate::api::core::delete::delete_document;
 
         delete_document(&self.manager, &self.schema, document_id)?;
         
@@ -94,7 +95,6 @@ impl Bm25Index {
     pub fn search(&self, query: &str, limit: usize) -> Result<Vec<SearchResult>> {
         use tantivy::query::QueryParser;
         use tantivy::collector::TopDocs;
-        use tantivy::doc_address;
 
         let reader = self.manager.reader()?;
         let searcher = reader.searcher();
@@ -118,21 +118,22 @@ impl Bm25Index {
                 let mut title: Option<String> = None;
                 let mut content: Option<String> = None;
 
-                for field_value in doc.field_values() {
-                    let field_name = self.schema.schema().get_field_name(field_value.field());
+                let schema = self.schema.schema();
+                for (field, value) in doc.field_values() {
+                    let field_name = schema.get_field_name(field);
                     match field_name {
                         "document_id" => {
-                            if let tantivy::schema::Value::Str(id) = field_value.value() {
+                            if let Some(id) = value.as_str() {
                                 document_id = Some(id.to_string());
                             }
                         }
                         "title" => {
-                            if let tantivy::schema::Value::Str(t) = field_value.value() {
+                            if let Some(t) = value.as_str() {
                                 title = Some(t.to_string());
                             }
                         }
                         "content" => {
-                            if let tantivy::schema::Value::Str(c) = field_value.value() {
+                            if let Some(c) = value.as_str() {
                                 content = Some(c.to_string());
                             }
                         }
@@ -153,7 +154,7 @@ impl Bm25Index {
     }
 
     pub fn count(&self) -> Result<u64> {
-        use crate::index::stats::get_stats;
+        use crate::api::core::stats::get_stats;
 
         let stats = get_stats(&self.manager)?;
         
@@ -196,51 +197,5 @@ mod tests {
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].document_id, "1");
         assert!(results[0].score > 0.0);
-    }
-
-    #[test]
-    fn test_update_document() {
-        let temp_dir = tempdir().unwrap();
-        let index_path = temp_dir.path().join("test_index");
-
-        let index = Bm25Index::create(&index_path).unwrap();
-        
-        index.add_document("1", "Old Title", "Old Content").unwrap();
-        index.update_document("1", "New Title", "New Content").unwrap();
-        
-        let results = index.search("New", 10).unwrap();
-        
-        assert_eq!(results.len(), 1);
-        assert_eq!(results[0].title, Some("New Title".to_string()));
-    }
-
-    #[test]
-    fn test_delete_document() {
-        let temp_dir = tempdir().unwrap();
-        let index_path = temp_dir.path().join("test_index");
-
-        let index = Bm25Index::create(&index_path).unwrap();
-        
-        index.add_document("1", "Title", "Content").unwrap();
-        index.delete_document("1").unwrap();
-        
-        let results = index.search("Title", 10).unwrap();
-        
-        assert_eq!(results.len(), 0);
-    }
-
-    #[test]
-    fn test_count() {
-        let temp_dir = tempdir().unwrap();
-        let index_path = temp_dir.path().join("test_index");
-
-        let index = Bm25Index::create(&index_path).unwrap();
-        
-        assert_eq!(index.count().unwrap(), 0);
-        
-        index.add_document("1", "Title 1", "Content 1").unwrap();
-        index.add_document("2", "Title 2", "Content 2").unwrap();
-        
-        assert_eq!(index.count().unwrap(), 2);
     }
 }

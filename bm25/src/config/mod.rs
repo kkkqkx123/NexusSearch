@@ -26,8 +26,8 @@ pub use builder::{Bm25ConfigBuilder, IndexManagerConfigBuilder, SearchConfigBuil
 pub use loader::{ConfigFormat, ConfigLoader, EnvLoader, FileLoader, LoaderError, LoaderResult};
 pub use validator::{ConfigValidator, ValidationError, ValidationResult};
 
-// Re-export types from index
-pub use crate::index::{
+// Re-export types from api::core
+pub use crate::api::core::{
     IndexManagerConfig, LogMergePolicyConfig, MergePolicyType, ReloadPolicyConfig,
 };
 

@@ -2,10 +2,10 @@
 //!
 //! 测试备份、恢复、索引导入导出等功能
 
-use bm25_service::index::{
+use bm25_service::api::core::{
     IndexManager, IndexSchema,
     persistence::{PersistenceManager, BackupInfo},
-    batch::batch_add_documents
+    batch::batch_add_documents,
 };
 use std::collections::HashMap;
 use tempfile::TempDir;

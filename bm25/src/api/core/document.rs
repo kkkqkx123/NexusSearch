@@ -1,5 +1,5 @@
 use crate::error::Result;
-use crate::index::{IndexManager, IndexSchema};
+use crate::api::core::{IndexManager, IndexSchema};
 use std::collections::HashMap;
 use tantivy::IndexWriter;
 

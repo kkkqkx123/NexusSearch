@@ -1,5 +1,5 @@
 use crate::config::{Bm25Config, SearchConfig};
-use crate::index::manager::IndexManagerConfig;
+use crate::api::core::IndexManagerConfig;
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 
@@ -108,24 +108,13 @@ impl Config {
         Ok(config)
     }
 
-    /// Validate configuration
-    pub fn validate(&self) -> anyhow::Result<()> {
-        // Validate writer memory budget
-        if self.index.manager.writer_memory_budget < 1_000_000 {
-            return Err(anyhow::anyhow!(
-                "writer memory budget must be at least 1MB, got {} bytes",
-                self.index.manager.writer_memory_budget
-            ));
+    fn validate(&self) -> anyhow::Result<()> {
+        if self.bm25.k1 <= 0.0 {
+            anyhow::bail!("BM25 k1 parameter must be positive");
         }
-
-        // Validate BM25 parameters
-        if self.bm25.k1 < 0.0 {
-            return Err(anyhow::anyhow!("BM25 k1 must be non-negative"));
+        if self.bm25.b < 0.0 || self.bm25.b > 1.0 {
+            anyhow::bail!("BM25 b parameter must be between 0 and 1");
         }
-        if !(0.0..=1.0).contains(&self.bm25.b) {
-            return Err(anyhow::anyhow!("BM25 b must be in range [0, 1]"));
-        }
-
         Ok(())
     }
 }
@@ -134,9 +123,7 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             server: ServerConfig {
-                address: "0.0.0.0:50051"
-                    .parse()
-                    .expect("Failed to parse default server address"),
+                address: "0.0.0.0:50051".parse().unwrap(),
             },
             redis: RedisConfig {
                 url: "redis://localhost:6379".to_string(),

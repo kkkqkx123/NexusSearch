@@ -1,5 +1,5 @@
 use crate::error::Result;
-use crate::index::IndexManager;
+use crate::api::core::IndexManager;
 
 #[derive(Debug, Clone)]
 pub struct IndexStats {

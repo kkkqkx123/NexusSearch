@@ -2,7 +2,7 @@
 //!
 //! 测试完整的索引生命周期，包括文档管理、搜索、持久化等功能的组合使用
 
-use bm25_service::index::{
+use bm25_service::api::core::{
     IndexManager, IndexSchema,
     document::{add_document, update_document, get_document},
     batch::{batch_add_documents, batch_update_documents},

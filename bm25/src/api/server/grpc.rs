@@ -7,8 +7,8 @@ use super::proto::{
     GetStatsRequest, GetStatsResponse, IndexDocumentRequest, IndexDocumentResponse, SearchRequest,
     SearchResponse,
 };
-use crate::index::{batch, delete, document, search, stats};
-use crate::{IndexManager, IndexSchema};
+use crate::api::core::{batch, delete, document, search, stats};
+use crate::api::core::{IndexManager, IndexSchema};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;

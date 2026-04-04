@@ -2,11 +2,11 @@
 //!
 //! 测试批量添加、更新和删除文档的功能
 
-use bm25_service::index::{
+use bm25_service::api::core::{
     IndexManager, IndexSchema,
-    batch::{batch_add_documents, batch_update_documents, batch_add_documents_optimized}
+    batch::{batch_add_documents, batch_update_documents, batch_add_documents_optimized},
+    delete::batch_delete_documents,
 };
-use bm25_service::index::delete::batch_delete_documents;
 use std::collections::HashMap;
 use tempfile::TempDir;
 

@@ -2,11 +2,11 @@
 //!
 //! 测试文档的添加、更新、删除和获取功能
 
-use bm25_service::index::{
+use bm25_service::api::core::{
     IndexManager, IndexSchema,
-    document::{add_document, update_document, get_document}
+    document::{add_document, update_document, get_document},
+    delete::delete_document,
 };
-use bm25_service::index::delete::delete_document;
 use std::collections::HashMap;
 use tempfile::TempDir;
 use tantivy::schema::Value;

@@ -2,7 +2,7 @@
 //!
 //! 测试 IndexManager 的创建、打开、读写器获取等核心功能
 
-use bm25_service::index::{IndexManager, IndexSchema};
+use bm25_service::api::core::{IndexManager, IndexSchema};
 use tempfile::TempDir;
 
 #[test]
