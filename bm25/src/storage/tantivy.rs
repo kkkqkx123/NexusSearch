@@ -153,11 +153,6 @@ impl StorageInterface for TantivyStorage {
         }
     }
 
-    async fn remove_term(&mut self, _term: &str) -> Result<()> {
-        // Tantivy 不支持单独删除词项，需要删除整个文档
-        Ok(())
-    }
-
     async fn clear(&mut self) -> Result<()> {
         if let Some(manager) = &self.index_manager {
             let manager = manager.write().await;

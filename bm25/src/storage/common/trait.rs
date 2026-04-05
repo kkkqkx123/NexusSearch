@@ -53,9 +53,6 @@ pub trait StorageInterface: Send + Sync {
     /// 获取词项频率
     async fn get_tf(&self, term: &str, doc_id: &str) -> Result<Option<f32>>;
 
-    /// 删除词项统计
-    async fn remove_term(&mut self, term: &str) -> Result<()>;
-
     /// 清空所有数据
     async fn clear(&mut self) -> Result<()>;
 

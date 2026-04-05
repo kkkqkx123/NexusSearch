@@ -399,21 +399,6 @@ impl StorageInterface for RedisStorage {
         Ok(tf)
     }
 
-    async fn remove_term(&mut self, term: &str) -> Result<()> {
-        let mut conn = self.get_connection().await?;
-
-        let _: () = redis::cmd("DEL")
-            .arg(&[self.make_tf_key(term), self.make_df_key(term)])
-            .query_async(&mut *conn)
-            .await
-            .map_err(|e| {
-                self.record_error("connection");
-                Bm25Error::StorageError(e.to_string())
-            })?;
-
-        Ok(())
-    }
-
     async fn clear(&mut self) -> Result<()> {
         let pattern = format!("{}:*", self.key_prefix);
         let keys = self.scan_keys(&pattern).await?;
