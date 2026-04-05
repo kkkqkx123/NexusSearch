@@ -25,7 +25,7 @@ pub fn extract_tf_df_stats(
     let mut df_set: HashMap<String, ()> = HashMap::new(); // 使用 HashSet 的替代方案
 
     // 遍历所有字段，提取词项
-    for (_field_name, content) in fields {
+    for content in fields.values() {
         // 简单的分词：按空白字符分割并转为小写
         // TODO: 支持多语言分词（中文、日文等）
         let terms: Vec<String> = content
@@ -50,7 +50,7 @@ pub fn extract_tf_df_stats(
     }
 
     // 将 df_set 转换为 df_map
-    let df_map: HashMap<String, u64> = df_set.into_iter().map(|(term, _)| (term, 1)).collect();
+    let df_map: HashMap<String, u64> = df_set.into_keys().map(|term| (term, 1)).collect();
 
     Bm25Stats {
         tf: tf_map,

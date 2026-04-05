@@ -3,11 +3,11 @@
 ## Summary
 
 - **Total Errors**: 0
-- **Total Warnings**: 3
-- **Total Issues**: 3
+- **Total Warnings**: 1
+- **Total Issues**: 1
 - **Unique Error Patterns**: 0
-- **Unique Warning Patterns**: 2
-- **Files with Issues**: 2
+- **Unique Warning Patterns**: 1
+- **Files with Issues**: 1
 
 ## Error Statistics
 
@@ -15,30 +15,24 @@
 
 ## Warning Statistics
 
-**Total Warnings**: 3
+**Total Warnings**: 1
 
 ### Warning Type Breakdown
 
-- **warning**: 3 warnings
+- **warning**: 1 warnings
 
 ### Files with Warnings (Top 10)
 
-- `src\api\core\index.rs`: 2 warnings
-- `src\api\embedded\index.rs`: 1 warnings
+- `tests\integration_test.rs`: 1 warnings
 
 ## Detailed Warning Categorization
 
-### warning: this expression creates a reference which is immediately dereferenced by the compiler: help: change this to: `self.manager.index()`
+### warning: unused variable: `e`: help: if this is intentional, prefix it with an underscore: `_e`
 
-**Total Occurrences**: 3  
-**Unique Files**: 2
+**Total Occurrences**: 1  
+**Unique Files**: 1
 
-#### `src\api\core\index.rs`: 2 occurrences
+#### `tests\integration_test.rs`: 1 occurrences
 
-- Line 18: this `impl` can be derived
-- Line 43: this `impl` can be derived
-
-#### `src\api\embedded\index.rs`: 1 occurrences
-
-- Line 103: this expression creates a reference which is immediately dereferenced by the compiler: help: change this to: `self.manager.index()`
+- Line 577: unused variable: `e`: help: if this is intentional, prefix it with an underscore: `_e`
 

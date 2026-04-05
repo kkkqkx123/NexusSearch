@@ -574,7 +574,7 @@ fn test_mixed_operations_stress() {
         loop {
             match delete_document(&manager, &schema, doc_id) {
                 Ok(_) => break,
-                Err(e) if retries < 3 => {
+                Err(_e) if retries < 3 => {
                     retries += 1;
                     std::thread::sleep(std::time::Duration::from_millis(100));
                 }

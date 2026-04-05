@@ -21,7 +21,6 @@ service = [
     "tokio/full",
     "tracing",
     "tracing-subscriber",
-    "metrics",
     "prost-build",
     "tonic-build",
     "async-trait",
@@ -49,7 +48,6 @@ bb8 = { version = "0.8", optional = true }
 
 tracing = { version = "0.1", optional = true }
 tracing-subscriber = { version = "0.3", features = ["env-filter"], optional = true }
-metrics = { version = "0.23", optional = true }
 async-trait = { version = "0.1", optional = true }
 
 [build-dependencies]

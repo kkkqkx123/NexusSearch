@@ -56,7 +56,7 @@ impl BM25Service {
                 }
             }
             StorageType::Redis => {
-                #[cfg(feature = "storage-redis")]
+                #[cfg(all(feature = "storage-redis", not(feature = "storage-tantivy")))]
                 {
                     let redis_config = crate::storage::redis::RedisStorageConfig {
                         url: config.storage.redis.url.clone(),
@@ -69,9 +69,20 @@ impl BM25Service {
                     };
                     Arc::new(StorageManagerBuilder::build_mutable_redis(redis_config).await?)
                 }
-                #[cfg(not(feature = "storage-redis"))]
+                #[cfg(feature = "storage-tantivy")]
                 {
-                    return Err(anyhow::anyhow!("Redis storage is not enabled"));
+                    // 当 storage-tantivy 启用时（无论是否启用 storage-redis），
+                    // DefaultStorage 是 TantivyStorage，所以无法使用 Redis 存储管理器
+                    // 此时使用 Tantivy 作为回退
+                    let tantivy_config = crate::storage::tantivy::TantivyStorageConfig {
+                        index_path: std::path::PathBuf::from(&config.storage.tantivy.index_path),
+                        writer_memory_mb: config.storage.tantivy.writer_memory_mb,
+                    };
+                    Arc::new(StorageManagerBuilder::build_mutable_tantivy(tantivy_config)?)
+                }
+                #[cfg(not(any(feature = "storage-redis", feature = "storage-tantivy")))]
+                {
+                    return Err(anyhow::anyhow!("No storage backend is enabled"));
                 }
             }
         };

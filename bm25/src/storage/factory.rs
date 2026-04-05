@@ -4,6 +4,11 @@
 
 use crate::config::{RedisStorageConfig, StorageConfig, StorageType, TantivyStorageConfig};
 use crate::error::Result;
+#[cfg(any(
+    not(feature = "storage-tantivy"),
+    not(feature = "storage-redis")
+))]
+use crate::error::Bm25Error;
 use crate::storage::common::r#trait::StorageInterface;
 use std::sync::Arc;
 
@@ -65,6 +70,7 @@ impl StorageFactory {
         
         #[cfg(not(feature = "storage-tantivy"))]
         {
+            let _config = config;
             Err(Bm25Error::StorageError(
                 "Tantivy storage is not enabled. Please enable the 'storage-tantivy' feature.".to_string()
             ))

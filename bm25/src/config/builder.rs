@@ -742,19 +742,14 @@ mod search_builder_tests {
 // ============================================================================
 
 /// Storage type enumeration
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum StorageType {
     /// Tantivy local file storage
+    #[default]
     Tantivy,
     /// Redis remote storage
     Redis,
-}
-
-impl Default for StorageType {
-    fn default() -> Self {
-        StorageType::Tantivy
-    }
 }
 
 /// Tantivy storage configuration

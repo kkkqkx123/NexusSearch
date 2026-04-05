@@ -5,6 +5,7 @@
 
 use crate::error::Result;
 use crate::storage::common::types::{StorageInfo, Bm25Stats};
+use crate::storage::common::r#trait::StorageInterface;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -15,7 +16,7 @@ use crate::storage::tantivy::TantivyStorage;
 #[cfg(all(feature = "storage-redis", not(feature = "storage-tantivy")))]
 use crate::storage::redis::RedisStorage;
 
-// 定义默认存储类型
+// 定义默认存储类型 - 当两个特性都启用时，优先使用 TantivyStorage
 #[cfg(feature = "storage-tantivy")]
 pub type DefaultStorage = TantivyStorage;
 
@@ -97,7 +98,7 @@ impl MutableStorageManager {
     pub fn from_arc(storage: Arc<DefaultStorage>) -> Self {
         Self {
             storage: Arc::new(RwLock::new(
-                Arc::try_unwrap(storage).unwrap_or_else(|arc| {
+                Arc::try_unwrap(storage).unwrap_or_else(|_arc| {
                     // 如果 Arc 有多个引用，克隆内部数据
                     #[cfg(feature = "storage-tantivy")]
                     {
@@ -198,8 +199,8 @@ impl StorageManagerBuilder {
         Ok(StorageManager::new(Arc::new(storage)))
     }
 
-    /// 创建默认存储管理器（只读）
-    #[cfg(feature = "storage-redis")]
+    /// 创建默认存储管理器（只读）- 仅在 Redis 作为默认存储时可用
+    #[cfg(all(feature = "storage-redis", not(feature = "storage-tantivy")))]
     pub async fn build_redis(config: crate::storage::redis::RedisStorageConfig) -> Result<StorageManager> {
         let storage = RedisStorage::new(config).await?;
         Ok(StorageManager::new(Arc::new(storage)))
@@ -212,8 +213,8 @@ impl StorageManagerBuilder {
         Ok(MutableStorageManager::new(storage))
     }
 
-    /// 创建可变存储管理器
-    #[cfg(feature = "storage-redis")]
+    /// 创建可变存储管理器 - 仅在 Redis 作为默认存储时可用
+    #[cfg(all(feature = "storage-redis", not(feature = "storage-tantivy")))]
     pub async fn build_mutable_redis(config: crate::storage::redis::RedisStorageConfig) -> Result<MutableStorageManager> {
         let storage = RedisStorage::new(config).await?;
         Ok(MutableStorageManager::new(storage))

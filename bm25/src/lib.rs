@@ -31,7 +31,7 @@ pub use api::server::{
 };
 
 #[cfg(feature = "service")]
-pub use api::server::{init_logging, init_metrics};
+pub use api::server::init_logging;
 
 #[cfg(feature = "service")]
 pub use api::server::{run_server, BM25Service};

@@ -156,7 +156,6 @@ impl RedisStorage {
                 self.error_stats.connection_errors.fetch_add(1, Ordering::Relaxed);
                 Bm25Error::StorageError(e.to_string())
             })
-            .map_err(Into::into)
     }
 
     async fn scan_keys(&self, pattern: &str) -> Result<Vec<String>> {

@@ -1,11 +1,10 @@
 #![cfg(feature = "service")]
 
-use bm25_service::{init_logging, init_metrics, run_server, ServiceConfig};
+use bm25_service::{init_logging, run_server, ServiceConfig};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     init_logging();
-    init_metrics();
 
     tracing::info!("Starting BM25 service");
 
