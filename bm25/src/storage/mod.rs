@@ -42,4 +42,4 @@ pub use tantivy::TantivyStorage;
 pub use redis::RedisStorage;
 
 pub use factory::StorageFactory;
-pub use manager::{MutableStorageManager, StorageManager};
+pub use manager::{DefaultStorage, MutableStorageManager, StorageManager, StorageManagerBuilder};

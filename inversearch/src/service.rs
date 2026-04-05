@@ -17,6 +17,7 @@ use crate::{Index, SearchOptions};
 
 // Import storage module
 use crate::storage::common::r#trait::StorageInterface;
+use crate::storage::{StorageManager, StorageManagerBuilder};
 
 #[cfg(feature = "store-cold-warm-cache")]
 use crate::storage::cold_warm_cache::ColdWarmCacheManager;
@@ -151,9 +152,10 @@ pub async fn create_storage_from_config(
 /// Inversearch gRPC service implementation
 pub struct InversearchService {
     index: Arc<RwLock<Index>>,
-    #[allow(dead_code)]
-    storage: Arc<dyn StorageInterface + Send + Sync>,
+    storage: StorageManager,
     config: Config,
+    /// 是否启用存储同步
+    storage_sync_enabled: bool,
 }
 
 impl Default for InversearchService {
@@ -173,12 +175,30 @@ impl InversearchService {
     pub async fn with_config_async(config: Config) -> Self {
         let index = Index::new(IndexOptions::default()).expect("Failed to create index");
         let index = Arc::new(RwLock::new(index));
-        let storage = create_storage_from_config(&config).await;
+        let storage = StorageManagerBuilder::build_default().await
+            .expect("Failed to create storage");
+        
+        // 尝试从存储恢复索引数据
+        let storage_sync_enabled = if config.storage.enabled {
+            match storage.mount(&index.read().await).await {
+                Ok(_) => {
+                    tracing::info!("Storage mounted successfully");
+                    true
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to mount storage: {}, continuing without persistence", e);
+                    false
+                }
+            }
+        } else {
+            false
+        };
 
         Self {
             index,
             storage,
             config,
+            storage_sync_enabled,
         }
     }
 
@@ -187,57 +207,93 @@ impl InversearchService {
         let index = Index::new(IndexOptions::default()).expect("Failed to create index");
         let index = Arc::new(RwLock::new(index));
 
-        #[cfg(feature = "store-cold-warm-cache")]
-        let storage: Arc<dyn StorageInterface + Send + Sync> =
+        let (storage, storage_sync_enabled) =
             tokio::task::block_in_place(|| {
                 tokio::runtime::Handle::current().block_on(async {
-                    let manager = ColdWarmCacheManager::new().await.unwrap();
-                    manager as Arc<dyn StorageInterface + Send + Sync>
+                    let storage = StorageManagerBuilder::build_default().await
+                        .expect("Failed to create storage");
+                    (storage, config.storage.enabled)
                 })
             });
-        #[cfg(not(feature = "store-cold-warm-cache"))]
-        let storage: Arc<dyn StorageInterface + Send + Sync> =
-            panic!("No storage backend enabled");
 
         Self {
             index,
             storage,
             config,
+            storage_sync_enabled,
         }
     }
 
     /// Create a new service instance with custom storage
-    pub fn with_storage<S: StorageInterface + Send + Sync + 'static>(storage: S) -> Self {
+    pub fn with_storage(storage: StorageManager) -> Self {
         let index = Index::new(IndexOptions::default()).expect("Failed to create index");
         let index = Arc::new(RwLock::new(index));
-        let storage = Arc::new(storage);
 
         Self {
             index,
             storage,
             config: Config::default(),
+            storage_sync_enabled: true,
         }
     }
 
     /// Create a new service instance with custom storage and config
-    pub fn with_storage_and_config<S: StorageInterface + Send + Sync + 'static>(
-        storage: S,
+    pub fn with_storage_and_config(
+        storage: StorageManager,
         config: Config,
     ) -> Self {
         let index = Index::new(IndexOptions::default()).expect("Failed to create index");
         let index = Arc::new(RwLock::new(index));
-        let storage = Arc::new(storage);
 
         Self {
             index,
             storage,
             config,
+            storage_sync_enabled: config.storage.enabled,
         }
     }
 
     /// Get the current configuration
     pub fn config(&self) -> &Config {
         &self.config
+    }
+
+    /// 同步索引到存储
+    async fn sync_to_storage(&self, replace: bool, append: bool) -> Result<(), crate::error::InversearchError> {
+        if !self.storage_sync_enabled {
+            return Ok(());
+        }
+
+        let index = self.index.read().await;
+        match self.storage.commit(&*index, replace, append).await {
+            Ok(_) => {
+                tracing::debug!("Index synced to storage successfully");
+                Ok(())
+            }
+            Err(e) => {
+                tracing::error!("Failed to sync index to storage: {}", e);
+                Err(e)
+            }
+        }
+    }
+
+    /// 从存储同步索引
+    async fn sync_from_storage(&self) -> Result<(), crate::error::InversearchError> {
+        if !self.storage_sync_enabled {
+            return Ok(());
+        }
+
+        let index = self.index.read().await;
+        match self.storage.mount(&*index).await {
+            Ok(_) => {
+                tracing::debug!("Index synced from storage successfully");
+                Ok(())
+            }
+            Err(e) => {
+                tracing::error!("Failed to sync index from storage: {}", e);
+                Err(e)
+            }
+        }
     }
 }
 
@@ -249,12 +305,26 @@ impl InversearchServiceTrait for InversearchService {
     ) -> Result<Response<AddDocumentResponse>, Status> {
         let req = request.into_inner();
 
-        let mut index = self.index.write().await;
-        match index.add(req.id, &req.content, false) {
-            Ok(_) => Ok(Response::new(AddDocumentResponse {
-                success: true,
-                error: String::new(),
-            })),
+        // 先修改索引
+        let add_result = {
+            let mut index = self.index.write().await;
+            index.add(req.id, &req.content, false)
+        };
+
+        // 如果索引修改成功，同步到存储
+        match add_result {
+            Ok(_) => {
+                if self.storage_sync_enabled {
+                    if let Err(e) = self.sync_to_storage(false, true).await {
+                        tracing::warn!("Failed to sync to storage after add: {}", e);
+                        // 继续返回成功，因为索引操作已成功
+                    }
+                }
+                Ok(Response::new(AddDocumentResponse {
+                    success: true,
+                    error: String::new(),
+                }))
+            }
             Err(e) => Ok(Response::new(AddDocumentResponse {
                 success: false,
                 error: e.to_string(),
@@ -268,12 +338,25 @@ impl InversearchServiceTrait for InversearchService {
     ) -> Result<Response<UpdateDocumentResponse>, Status> {
         let req = request.into_inner();
 
-        let mut index = self.index.write().await;
-        match index.update(req.id, &req.content) {
-            Ok(_) => Ok(Response::new(UpdateDocumentResponse {
-                success: true,
-                error: String::new(),
-            })),
+        // 先修改索引
+        let update_result = {
+            let mut index = self.index.write().await;
+            index.update(req.id, &req.content)
+        };
+
+        // 如果索引修改成功，同步到存储
+        match update_result {
+            Ok(_) => {
+                if self.storage_sync_enabled {
+                    if let Err(e) = self.sync_to_storage(false, true).await {
+                        tracing::warn!("Failed to sync to storage after update: {}", e);
+                    }
+                }
+                Ok(Response::new(UpdateDocumentResponse {
+                    success: true,
+                    error: String::new(),
+                }))
+            }
             Err(e) => Ok(Response::new(UpdateDocumentResponse {
                 success: false,
                 error: e.to_string(),
@@ -287,12 +370,30 @@ impl InversearchServiceTrait for InversearchService {
     ) -> Result<Response<RemoveDocumentResponse>, Status> {
         let req = request.into_inner();
 
-        let mut index = self.index.write().await;
-        match index.remove(req.id, false) {
-            Ok(_) => Ok(Response::new(RemoveDocumentResponse {
-                success: true,
-                error: String::new(),
-            })),
+        // 先修改索引
+        let remove_result = {
+            let mut index = self.index.write().await;
+            index.remove(req.id, false)
+        };
+
+        // 如果索引修改成功，同步到存储
+        match remove_result {
+            Ok(_) => {
+                if self.storage_sync_enabled {
+                    // 从存储中删除文档
+                    if let Err(e) = self.storage.remove_documents(&[req.id]).await {
+                        tracing::warn!("Failed to remove document from storage: {}", e);
+                    }
+                    // 同步索引状态
+                    if let Err(e) = self.sync_to_storage(false, true).await {
+                        tracing::warn!("Failed to sync to storage after remove: {}", e);
+                    }
+                }
+                Ok(Response::new(RemoveDocumentResponse {
+                    success: true,
+                    error: String::new(),
+                }))
+            }
             Err(e) => Ok(Response::new(RemoveDocumentResponse {
                 success: false,
                 error: e.to_string(),
@@ -347,8 +448,17 @@ impl InversearchServiceTrait for InversearchService {
         &self,
         _request: Request<ClearIndexRequest>,
     ) -> Result<Response<ClearIndexResponse>, Status> {
-        let mut index = self.index.write().await;
-        index.clear();
+        {
+            let mut index = self.index.write().await;
+            index.clear();
+        }
+
+        // 同步清空存储
+        if self.storage_sync_enabled {
+            if let Err(e) = self.storage.clear().await {
+                tracing::warn!("Failed to clear storage: {}", e);
+            }
+        }
 
         Ok(Response::new(ClearIndexResponse {
             success: true,

@@ -60,6 +60,12 @@ pub mod memory;
 // 存储工厂
 pub mod factory;
 
+// 存储管理器
+pub mod manager;
+
+// 持久化管理器
+pub mod persistence;
+
 // 重新导出常用类型和 trait，方便使用
 pub use common::{
     compression::{compress_data, decompress_data},
@@ -72,3 +78,9 @@ pub use common::{
 
 // 重新导出工厂
 pub use factory::StorageFactory;
+
+// 重新导出存储管理器
+pub use manager::{DefaultStorage, StorageManager, StorageManagerBuilder};
+
+// 重新导出持久化管理器
+pub use persistence::{BackupInfo, IndexMetadata, IndexSnapshot, PersistenceManager};

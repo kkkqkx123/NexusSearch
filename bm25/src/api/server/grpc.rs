@@ -9,7 +9,8 @@ use super::proto::{
 };
 use crate::api::core::{batch, delete, document, search, stats};
 use crate::api::core::{IndexManager, IndexSchema};
-use crate::storage::{MutableStorageManager, StorageFactory};
+use crate::storage::{MutableStorageManager, StorageManagerBuilder};
+use crate::config::StorageType;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -38,9 +39,42 @@ impl BM25Service {
     pub async fn with_storage(config: Config) -> Result<Self, anyhow::Error> {
         let index_path = PathBuf::from(&config.index.index_path);
         
-        // 创建存储管理器
-        let storage = StorageFactory::create(config.storage.clone()).await?;
-        let storage_manager = Arc::new(MutableStorageManager::from_arc(storage));
+        // 根据配置创建存储管理器
+        let storage_manager = match config.storage.storage_type {
+            StorageType::Tantivy => {
+                #[cfg(feature = "storage-tantivy")]
+                {
+                    let tantivy_config = crate::storage::tantivy::TantivyStorageConfig {
+                        index_path: std::path::PathBuf::from(&config.storage.tantivy.index_path),
+                        writer_memory_mb: config.storage.tantivy.writer_memory_mb,
+                    };
+                    Arc::new(StorageManagerBuilder::build_mutable_tantivy(tantivy_config)?)
+                }
+                #[cfg(not(feature = "storage-tantivy"))]
+                {
+                    return Err(anyhow::anyhow!("Tantivy storage is not enabled"));
+                }
+            }
+            StorageType::Redis => {
+                #[cfg(feature = "storage-redis")]
+                {
+                    let redis_config = crate::storage::redis::RedisStorageConfig {
+                        url: config.storage.redis.url.clone(),
+                        pool_size: config.storage.redis.pool_size,
+                        connection_timeout: std::time::Duration::from_secs(config.storage.redis.connection_timeout_secs),
+                        key_prefix: config.storage.redis.key_prefix.clone(),
+                        min_idle: config.storage.redis.min_idle,
+                        max_lifetime: config.storage.redis.max_lifetime_secs.map(std::time::Duration::from_secs),
+                        connection_timeout_bb8: std::time::Duration::from_secs(config.storage.redis.connection_timeout_secs),
+                    };
+                    Arc::new(StorageManagerBuilder::build_mutable_redis(redis_config).await?)
+                }
+                #[cfg(not(feature = "storage-redis"))]
+                {
+                    return Err(anyhow::anyhow!("Redis storage is not enabled"));
+                }
+            }
+        };
         
         // 初始化存储
         storage_manager.init().await?;

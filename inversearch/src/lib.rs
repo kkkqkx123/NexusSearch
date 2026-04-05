@@ -141,6 +141,8 @@ pub use serialize::{
 pub use storage::common::r#trait::StorageInterface;
 pub use storage::common::types::StorageInfo;
 pub use storage::factory::StorageFactory;
+pub use storage::manager::{DefaultStorage, StorageManager, StorageManagerBuilder};
+pub use storage::persistence::{BackupInfo, IndexMetadata, IndexSnapshot, PersistenceManager};
 
 // Storage backends - conditionally available
 #[cfg(feature = "store-file")]
