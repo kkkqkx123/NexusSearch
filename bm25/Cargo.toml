@@ -26,8 +26,8 @@ service = [
     "tonic-build",
     "async-trait",
 ]
-storage-tantivy = []
-storage-redis = ["redis", "async-trait"]
+storage-tantivy = ["async-trait"]
+storage-redis = ["redis", "async-trait", "bb8"]
 
 [dependencies]
 tantivy = "0.24"
@@ -45,6 +45,7 @@ tokio = { version = "1.48", features = ["rt-multi-thread", "macros", "sync"] }
 tonic = { version = "0.12", optional = true }
 prost = { version = "0.13", optional = true }
 redis = { version = "0.29", features = ["tokio-comp", "connection-manager", "aio"], optional = true }
+bb8 = { version = "0.8", optional = true }
 
 tracing = { version = "0.1", optional = true }
 tracing-subscriber = { version = "0.3", features = ["env-filter"], optional = true }

@@ -1,4 +1,4 @@
-use crate::config::{Bm25Config, SearchConfig};
+use crate::config::{Bm25Config, SearchConfig, StorageConfig};
 use crate::api::core::IndexManagerConfig;
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
@@ -7,6 +7,7 @@ use std::net::SocketAddr;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
     pub server: ServerConfig,
+    pub storage: StorageConfig,
     pub index: IndexConfig,
     pub bm25: Bm25Config,
     pub search: SearchConfig,
@@ -112,6 +113,7 @@ impl Default for Config {
             server: ServerConfig {
                 address: "0.0.0.0:50051".parse().unwrap(),
             },
+            storage: StorageConfig::default(),
             index: IndexConfig {
                 data_dir: "./data".to_string(),
                 index_path: "./index".to_string(),

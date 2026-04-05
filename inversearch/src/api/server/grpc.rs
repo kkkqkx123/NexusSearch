@@ -17,132 +17,36 @@ use crate::api::core::{Index, SearchOptions};
 
 // Import storage module
 use crate::storage::common::r#trait::StorageInterface;
+use crate::storage::factory::StorageFactory;
 
 #[cfg(feature = "store-cold-warm-cache")]
 use crate::storage::cold_warm_cache::ColdWarmCacheManager;
 
-#[cfg(feature = "store-file")]
-use crate::storage::file::FileStorage;
-
-#[cfg(feature = "store-redis")]
-use crate::storage::redis::{RedisStorage, RedisStorageConfig};
-
-#[cfg(feature = "store-wal")]
-use crate::storage::wal_storage::WALStorage;
-
 // Import config
-use crate::api::server::config::ServiceConfig;
 use crate::config::Config;
-use crate::config::StorageBackend;
-
-#[cfg(feature = "store-wal")]
-use crate::storage::wal::WALConfig;
-
-// Import index module's IndexOptions
-use crate::index::IndexOptions;
 
 /// Create storage based on configuration
 #[allow(clippy::needless_return)]
 pub async fn create_storage_from_config(
     config: &Config,
 ) -> Arc<dyn StorageInterface + Send + Sync> {
-    if !config.storage.enabled {
-        // 存储未启用时，默认使用冷热缓存
-        #[cfg(feature = "store-cold-warm-cache")]
-        {
-            return tokio::task::block_in_place(|| {
-                tokio::runtime::Handle::current().block_on(async {
-                    let manager = ColdWarmCacheManager::new().await.unwrap();
-                    manager as Arc<dyn StorageInterface + Send + Sync>
+    match StorageFactory::from_config(config).await {
+        Ok(storage) => storage,
+        Err(e) => {
+            eprintln!("Failed to create storage: {}", e);
+            // Fallback to cold-warm cache
+            #[cfg(feature = "store-cold-warm-cache")]
+            {
+                use crate::storage::cold_warm_cache::ColdWarmCacheManager;
+                tokio::task::block_in_place(|| {
+                    tokio::runtime::Handle::current().block_on(async {
+                        ColdWarmCacheManager::new().await.unwrap()
+                            as Arc<dyn StorageInterface + Send + Sync>
+                    })
                 })
-            });
-        }
-        #[cfg(not(feature = "store-cold-warm-cache"))]
-        panic!("No storage backend enabled");
-    }
-
-    match &config.storage.backend {
-        #[cfg(feature = "store-file")]
-        StorageBackend::File => {
-            let file_config = config
-                .storage
-                .file
-                .as_ref()
-                .map(|c| c.base_path.clone())
-                .unwrap_or_else(|| "./data".to_string());
-            Arc::new(FileStorage::new(file_config))
-        }
-        #[cfg(feature = "store-redis")]
-        StorageBackend::Redis => {
-            let redis_config = config
-                .storage
-                .redis
-                .as_ref()
-                .map(|c| RedisStorageConfig {
-                    url: c.url.clone(),
-                    pool_size: c.pool_size,
-                    ..Default::default()
-                })
-                .unwrap_or_default();
-            match RedisStorage::new(redis_config).await {
-                Ok(storage) => Arc::new(storage),
-                Err(e) => {
-                    eprintln!(
-                        "Failed to connect to Redis: {}, falling back to cold-warm cache",
-                        e
-                    );
-                    #[cfg(feature = "store-cold-warm-cache")]
-                    {
-                        return tokio::task::block_in_place(|| {
-                            tokio::runtime::Handle::current().block_on(async {
-                                let manager = ColdWarmCacheManager::new().await.unwrap();
-                                manager as Arc<dyn StorageInterface + Send + Sync>
-                            })
-                        });
-                    }
-                    #[cfg(not(feature = "store-cold-warm-cache"))]
-                    panic!("No fallback storage available");
-                }
             }
-        }
-        #[cfg(feature = "store-wal")]
-        StorageBackend::Wal => {
-            let wal_config = config
-                .storage
-                .wal
-                .as_ref()
-                .map(|c| WALConfig {
-                    base_path: std::path::PathBuf::from(&c.base_path),
-                    max_wal_size: c.max_wal_size,
-                    compression: c.compression,
-                    snapshot_interval: c.snapshot_interval,
-                    ..Default::default()
-                })
-                .unwrap_or_default();
-            match WALStorage::new(wal_config).await {
-                Ok(storage) => Arc::new(storage),
-                Err(e) => {
-                    eprintln!("Failed to create WAL storage: {}, falling back to cold-warm cache", e);
-                    #[cfg(feature = "store-cold-warm-cache")]
-                    {
-                        return tokio::task::block_in_place(|| {
-                            tokio::runtime::Handle::current().block_on(async {
-                                let manager = ColdWarmCacheManager::new().await.unwrap();
-                                manager as Arc<dyn StorageInterface + Send + Sync>
-                            })
-                        });
-                    }
-                    #[cfg(not(feature = "store-cold-warm-cache"))]
-                    panic!("No fallback storage available");
-                }
-            }
-        }
-        StorageBackend::ColdWarmCache => {
-            // ColdWarmCacheManager 已经是 Arc<Self> 且实现了 StorageInterface
-            // 直接返回即可，不需要额外的 RwLock 包装
-            let manager = ColdWarmCacheManager::new().await.unwrap();
-            // 将 Arc<ColdWarmCacheManager> 转换为 Arc<dyn StorageInterface + Send + Sync>
-            manager as Arc<dyn StorageInterface + Send + Sync>
+            #[cfg(not(feature = "store-cold-warm-cache"))]
+            panic!("No fallback storage available: {}", e);
         }
     }
 }

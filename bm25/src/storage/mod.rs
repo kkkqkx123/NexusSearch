@@ -9,6 +9,7 @@
 //! ├── common/
 //! │   ├── types.rs         # 共享类型定义
 //! │   └── trait.rs         # 存储接口 trait
+//! ├── factory.rs           # 存储工厂
 //! ├── redis.rs             # Redis 存储实现（可选）
 //! └── tantivy.rs           # Tantivy 本地存储（默认）
 //! ```
@@ -26,6 +27,8 @@ pub mod tantivy;
 #[cfg(feature = "storage-redis")]
 pub mod redis;
 
+pub mod factory;
+
 pub use common::{
     r#trait::StorageInterface,
     types::{StorageInfo, Bm25Stats},
@@ -36,3 +39,5 @@ pub use tantivy::TantivyStorage;
 
 #[cfg(feature = "storage-redis")]
 pub use redis::RedisStorage;
+
+pub use factory::StorageFactory;

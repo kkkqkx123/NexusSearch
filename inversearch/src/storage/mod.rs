@@ -64,6 +64,9 @@ pub mod cold_warm_cache;
 // 测试用内存存储（仅用于测试）
 pub mod memory;
 
+// 存储工厂
+pub mod factory;
+
 // 重新导出常用类型和 trait，方便使用
 pub use common::{
     compression::{compress_data, decompress_data},
@@ -71,3 +74,6 @@ pub use common::{
     metrics::{MetricsCollector, OperationTimer},
     FileStorageData, StorageInfo, StorageInterface, StorageMetrics,
 };
+
+// 重新导出工厂
+pub use factory::StorageFactory;

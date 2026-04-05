@@ -100,7 +100,7 @@ pub use compress::{
     CompressCache, RadixTable, DEFAULT_CACHE_SIZE,
 };
 pub use config::{
-    Config, StorageBackend, StorageConfig, EmbeddedConfig, EmbeddedConfigBuilder, TokenizeMode,
+    Config, StorageBackend, StorageConfig, StorageConfigBuilder, EmbeddedConfig, EmbeddedConfigBuilder, TokenizeMode,
 };
 pub use encoder::{
     Encoder,
@@ -140,6 +140,7 @@ pub use serialize::{
 };
 pub use storage::common::r#trait::StorageInterface;
 pub use storage::common::types::StorageInfo;
+pub use storage::factory::StorageFactory;
 
 // Storage backends - conditionally available
 #[cfg(feature = "store-file")]

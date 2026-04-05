@@ -42,6 +42,7 @@ pub use error::{Bm25Error, Result};
 // Re-export config types
 pub use config::{Bm25Config, FieldWeights, SearchConfig};
 pub use config::IndexManagerConfigBuilder;
+pub use config::{StorageConfig, StorageType, StorageConfigBuilder, TantivyStorageConfig, RedisStorageConfig};
 
 // Re-export storage types
 #[cfg(any(feature = "storage-tantivy", feature = "storage-redis"))]
@@ -52,3 +53,6 @@ pub use storage::TantivyStorage;
 
 #[cfg(feature = "storage-redis")]
 pub use storage::RedisStorage;
+
+#[cfg(any(feature = "storage-tantivy", feature = "storage-redis"))]
+pub use storage::StorageFactory;

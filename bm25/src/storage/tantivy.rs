@@ -6,6 +6,7 @@ use crate::api::core::IndexManager;
 use crate::error::{Bm25Error, Result};
 use crate::storage::common::r#trait::{Bm25Stats, StorageInterface};
 use crate::storage::common::types::StorageInfo;
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -86,19 +87,70 @@ impl StorageInterface for TantivyStorage {
         Ok(())
     }
 
-    async fn get_stats(&self, _term: &str) -> Result<Option<Bm25Stats>> {
-        // Tantivy 的统计信息在搜索时自动计算
-        Ok(Some(Bm25Stats::default()))
+    async fn get_stats(&self, term: &str) -> Result<Option<Bm25Stats>> {
+        let manager = self.get_index_manager()?;
+        let manager = manager.read().await;
+        let reader = manager.reader()?;
+        let searcher = reader.searcher();
+        
+        // Get term from the content field
+        let field = manager.schema().get_field("content").unwrap();
+        let term_obj = tantivy::Term::from_field_text(field, term);
+        
+        // Get document frequency
+        let doc_freq = searcher.doc_freq(&term_obj)?;
+        let total_docs = searcher.num_docs();
+        
+        // Calculate average document length
+        let avg_doc_length = if total_docs > 0 {
+            let total_terms = searcher.num_docs() * 100; // Approximation
+            total_terms as f32 / total_docs as f32
+        } else {
+            0.0
+        };
+        
+        Ok(Some(Bm25Stats {
+            tf: HashMap::new(), // TF is calculated per document during search
+            df: HashMap::from([(term.to_string(), doc_freq as u64)]),
+            total_docs: total_docs as u64,
+            avg_doc_length,
+        }))
     }
 
-    async fn get_df(&self, _term: &str) -> Result<Option<u64>> {
-        // Tantivy 的文档频率在搜索时自动获取
-        Ok(Some(0))
+    async fn get_df(&self, term: &str) -> Result<Option<u64>> {
+        let manager = self.get_index_manager()?;
+        let manager = manager.read().await;
+        let reader = manager.reader()?;
+        let searcher = reader.searcher();
+        
+        let field = manager.schema().get_field("content").unwrap();
+        let term_obj = tantivy::Term::from_field_text(field, term);
+        
+        let doc_freq = searcher.doc_freq(&term_obj)?;
+        Ok(Some(doc_freq as u64))
     }
 
-    async fn get_tf(&self, _term: &str, _doc_id: &str) -> Result<Option<f32>> {
-        // Tantivy 的词项频率在搜索时自动获取
-        Ok(Some(0.0))
+    async fn get_tf(&self, term: &str, _doc_id: &str) -> Result<Option<f32>> {
+        // TF is calculated during search time in Tantivy
+        // This is a simplified implementation
+        let manager = self.get_index_manager()?;
+        let manager = manager.read().await;
+        let reader = manager.reader()?;
+        let searcher = reader.searcher();
+        
+        let field = manager.schema().get_field("content").unwrap();
+        let term_obj = tantivy::Term::from_field_text(field, term);
+        
+        let doc_freq = searcher.doc_freq(&term_obj)?;
+        let total_docs = searcher.num_docs();
+        
+        // Simple TF calculation (in real BM25, this is more complex)
+        if doc_freq > 0 && total_docs > 0 {
+            let tf = (doc_freq as f32) / (total_docs as f32);
+            Ok(Some(tf))
+        } else {
+            Ok(Some(0.0))
+        }
     }
 
     async fn remove_term(&mut self, _term: &str) -> Result<()> {

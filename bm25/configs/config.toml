@@ -1,6 +1,22 @@
 [server]
 address = "0.0.0.0:50051"
 
+# Storage configuration
+[storage]
+type = "tantivy"  # "tantivy" or "redis"
+
+[storage.tantivy]
+index_path = "./index"
+writer_memory_mb = 50
+
+[storage.redis]
+url = "redis://127.0.0.1:6379"
+pool_size = 10
+connection_timeout_secs = 5
+key_prefix = "bm25"
+min_idle = 2
+max_lifetime_secs = 60
+
 [index]
 data_dir = "./data"
 index_path = "./index"

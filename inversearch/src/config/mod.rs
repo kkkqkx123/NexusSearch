@@ -265,7 +265,7 @@ pub enum StorageBackend {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RedisConfig {
     pub url: String,
-    pub pool_size: usize,
+    pub pool_size: u32,
 }
 
 #[cfg(feature = "store-redis")]
@@ -315,6 +315,94 @@ impl Default for WALConfig {
             compression: true,
             snapshot_interval: 1000,
         }
+    }
+}
+
+/// Builder for StorageConfig
+pub struct StorageConfigBuilder {
+    enabled: bool,
+    backend: StorageBackend,
+    #[cfg(feature = "store-redis")]
+    redis: Option<RedisConfig>,
+    #[cfg(feature = "store-file")]
+    file: Option<FileStorageConfig>,
+    #[cfg(feature = "store-wal")]
+    wal: Option<WALConfig>,
+}
+
+impl Default for StorageConfigBuilder {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            backend: StorageBackend::ColdWarmCache,
+            #[cfg(feature = "store-redis")]
+            redis: Some(RedisConfig::default()),
+            #[cfg(feature = "store-file")]
+            file: Some(FileStorageConfig::default()),
+            #[cfg(feature = "store-wal")]
+            wal: Some(WALConfig::default()),
+        }
+    }
+}
+
+impl StorageConfigBuilder {
+    /// Create a new StorageConfigBuilder
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Set whether storage is enabled
+    pub fn enabled(mut self, enabled: bool) -> Self {
+        self.enabled = enabled;
+        self
+    }
+
+    /// Set storage backend type
+    pub fn backend(mut self, backend: StorageBackend) -> Self {
+        self.backend = backend;
+        self
+    }
+
+    /// Set Redis configuration
+    #[cfg(feature = "store-redis")]
+    pub fn redis(mut self, config: RedisConfig) -> Self {
+        self.redis = Some(config);
+        self
+    }
+
+    /// Set file storage configuration
+    #[cfg(feature = "store-file")]
+    pub fn file(mut self, config: FileStorageConfig) -> Self {
+        self.file = Some(config);
+        self
+    }
+
+    /// Set WAL storage configuration
+    #[cfg(feature = "store-wal")]
+    pub fn wal(mut self, config: WALConfig) -> Self {
+        self.wal = Some(config);
+        self
+    }
+
+    /// Build the StorageConfig
+    pub fn build(self) -> StorageConfig {
+        StorageConfig {
+            enabled: self.enabled,
+            backend: self.backend,
+            #[cfg(feature = "store-redis")]
+            redis: self.redis,
+            #[cfg(feature = "store-file")]
+            file: self.file,
+            #[cfg(feature = "store-wal")]
+            wal: self.wal,
+        }
+    }
+}
+
+impl StorageConfig {
+    /// Create a new StorageConfigBuilder
+    pub fn builder() -> StorageConfigBuilder {
+        StorageConfigBuilder::default()
     }
 }
 
