@@ -88,11 +88,12 @@ pub async fn create_storage_from_config(
                 Ok(storage) => Arc::new(storage),
                 Err(e) => {
                     eprintln!(
-                        "Failed to connect to Redis: {}, falling back to cold-warm cache",
+                        "Failed to connect to Redis: {}. Storage will be unavailable.",
                         e
                     );
                     #[cfg(feature = "store-cold-warm-cache")]
                     {
+                        eprintln!("Falling back to cold-warm cache...");
                         return tokio::task::block_in_place(|| {
                             tokio::runtime::Handle::current().block_on(async {
                                 let manager = ColdWarmCacheManager::new().await.unwrap();

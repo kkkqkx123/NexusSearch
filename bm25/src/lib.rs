@@ -2,6 +2,9 @@ pub mod config;
 pub mod error;
 pub mod api;
 
+#[cfg(any(feature = "storage-tantivy", feature = "storage-redis"))]
+pub mod storage;
+
 // Re-export core API (always available)
 pub use api::core;
 
@@ -24,7 +27,7 @@ pub use api::server;
 
 #[cfg(feature = "service")]
 pub use api::server::{
-    Config as ServiceConfig, IndexConfig as ServiceIndexConfig, RedisConfig, ServerConfig,
+    Config as ServiceConfig, IndexConfig as ServiceIndexConfig, ServerConfig,
 };
 
 #[cfg(feature = "service")]
@@ -39,3 +42,13 @@ pub use error::{Bm25Error, Result};
 // Re-export config types
 pub use config::{Bm25Config, FieldWeights, SearchConfig};
 pub use config::IndexManagerConfigBuilder;
+
+// Re-export storage types
+#[cfg(any(feature = "storage-tantivy", feature = "storage-redis"))]
+pub use storage::{StorageInterface, StorageInfo, Bm25Stats};
+
+#[cfg(feature = "storage-tantivy")]
+pub use storage::TantivyStorage;
+
+#[cfg(feature = "storage-redis")]
+pub use storage::RedisStorage;

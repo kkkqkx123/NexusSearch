@@ -4,9 +4,10 @@ use crate::storage::common::r#trait::StorageInterface;
 use crate::storage::common::types::StorageInfo;
 use crate::Index;
 use redis::{aio::MultiplexedConnection, Client as RedisClient};
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
+use tokio::sync::RwLock;
 
 #[derive(Debug, Clone)]
 pub struct RedisStorageConfig {
@@ -29,12 +30,13 @@ impl Default for RedisStorageConfig {
 
 pub struct RedisStorage {
     client: RedisClient,
-    #[allow(dead_code)]
     config: RedisStorageConfig,
     key_prefix: String,
+    connection_pool: Arc<RwLock<MultiplexedConnection>>,
     memory_usage: Arc<AtomicUsize>,
-    operation_count: Arc<AtomicUsize>,
-    total_latency: Arc<AtomicUsize>,
+    operation_count: Arc<AtomicU64>,
+    total_latency: Arc<AtomicU64>,
+    error_count: Arc<AtomicU64>,
     last_operation_time: Arc<std::sync::Mutex<Option<Instant>>>,
 }
 
@@ -44,13 +46,13 @@ impl RedisStorage {
         let client = RedisClient::open(config.url.as_str())
             .map_err(|e| crate::error::StorageError::Connection(e.to_string()))?;
 
-        let mut conn = client
+        let conn = client
             .get_multiplexed_async_connection()
             .await
             .map_err(|e| crate::error::StorageError::Connection(e.to_string()))?;
 
         let _: String = redis::cmd("PING")
-            .query_async(&mut conn)
+            .query_async(&mut conn.clone())
             .await
             .map_err(|e| crate::error::StorageError::Connection(e.to_string()))?;
 
@@ -58,9 +60,11 @@ impl RedisStorage {
             client,
             config,
             key_prefix,
+            connection_pool: Arc::new(RwLock::new(conn)),
             memory_usage: Arc::new(AtomicUsize::new(0)),
-            operation_count: Arc::new(AtomicUsize::new(0)),
-            total_latency: Arc::new(AtomicUsize::new(0)),
+            operation_count: Arc::new(AtomicU64::new(0)),
+            total_latency: Arc::new(AtomicU64::new(0)),
+            error_count: Arc::new(AtomicU64::new(0)),
             last_operation_time: Arc::new(std::sync::Mutex::new(None)),
         })
     }
@@ -86,6 +90,45 @@ impl RedisStorage {
             .get_multiplexed_async_connection()
             .await
             .map_err(|e| crate::error::StorageError::Connection(e.to_string()).into())
+    }
+
+    async fn with_connection<F, R>(&self, f: F) -> Result<R>
+    where
+        F: FnOnce(&mut MultiplexedConnection) -> redis::RedisFuture<'_, R>,
+    {
+        let mut conn_guard = self.connection_pool.write().await;
+        let result = f(&mut conn_guard).await.map_err(|e| {
+            self.error_count.fetch_add(1, Ordering::Relaxed);
+            crate::error::StorageError::Connection(e.to_string())
+        })?;
+        Ok(result)
+    }
+
+    async fn scan_keys(&self, pattern: &str) -> Result<Vec<String>> {
+        let mut conn = self.get_connection().await?;
+        let mut cursor = 0u64;
+        let mut all_keys = Vec::new();
+
+        loop {
+            let (next_cursor, keys): (u64, Vec<String>) = redis::cmd("SCAN")
+                .arg(cursor)
+                .arg("MATCH")
+                .arg(pattern)
+                .arg("COUNT")
+                .arg(100)
+                .query_async(&mut conn)
+                .await
+                .map_err(|e| crate::error::StorageError::Connection(e.to_string()))?;
+
+            all_keys.extend(keys);
+            cursor = next_cursor;
+
+            if cursor == 0 {
+                break;
+            }
+        }
+
+        Ok(all_keys)
     }
 
     /// 批量提交（使用 MSET）
@@ -146,16 +189,11 @@ impl StorageInterface for RedisStorage {
     }
 
     async fn destroy(&mut self) -> Result<()> {
-        let mut conn = self.get_connection().await?;
-
         let pattern = format!("{}:*", self.key_prefix);
-        let keys: Vec<String> = redis::cmd("KEYS")
-            .arg(&pattern)
-            .query_async(&mut conn)
-            .await
-            .map_err(|e| crate::error::StorageError::Connection(e.to_string()))?;
+        let keys = self.scan_keys(&pattern).await?;
 
         if !keys.is_empty() {
+            let mut conn = self.get_connection().await?;
             let _: () = redis::cmd("DEL")
                 .arg(keys.as_slice())
                 .query_async(&mut conn)
@@ -254,25 +292,27 @@ impl StorageInterface for RedisStorage {
     }
 
     async fn enrich(&self, ids: &[DocId]) -> Result<EnrichedSearchResults> {
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let keys: Vec<String> = ids.iter().map(|&id| self.make_doc_key(id)).collect();
         let mut conn = self.get_connection().await?;
+
+        let serialized_list: Vec<String> = redis::cmd("MGET")
+            .arg(&keys)
+            .query_async(&mut conn)
+            .await
+            .map_err(|e| crate::error::StorageError::Connection(e.to_string()))?;
+
         let mut results = Vec::new();
-
-        for &id in ids {
-            let key = self.make_doc_key(id);
-            let serialized: String = redis::cmd("GET")
-                .arg(&key)
-                .query_async(&mut conn)
-                .await
-                .map_err(|e| crate::error::StorageError::Connection(e.to_string()))?;
-
+        for (i, serialized) in serialized_list.into_iter().enumerate() {
             if !serialized.is_empty() {
+                let doc: serde_json::Value = serde_json::from_str(&serialized)
+                    .map_err(|e| crate::error::StorageError::Deserialization(e.to_string()))?;
                 results.push(crate::r#type::EnrichedSearchResult {
-                    id,
-                    doc: Some(
-                        serde_json::from_str(&serialized).map_err(|e| {
-                            crate::error::StorageError::Deserialization(e.to_string())
-                        })?,
-                    ),
+                    id: ids[i],
+                    doc: Some(doc),
                     highlight: None,
                 });
             }
@@ -295,16 +335,18 @@ impl StorageInterface for RedisStorage {
     }
 
     async fn remove(&mut self, ids: &[DocId]) -> Result<()> {
+        if ids.is_empty() {
+            return Ok(());
+        }
+
+        let keys: Vec<String> = ids.iter().map(|&id| self.make_doc_key(id)).collect();
         let mut conn = self.get_connection().await?;
 
-        for &id in ids {
-            let key = self.make_doc_key(id);
-            let _: () = redis::cmd("DEL")
-                .arg(&key)
-                .query_async(&mut conn)
-                .await
-                .map_err(|e| crate::error::StorageError::Connection(e.to_string()))?;
-        }
+        let _: () = redis::cmd("DEL")
+            .arg(&keys)
+            .query_async(&mut conn)
+            .await
+            .map_err(|e| crate::error::StorageError::Connection(e.to_string()))?;
 
         Ok(())
     }
@@ -314,46 +356,30 @@ impl StorageInterface for RedisStorage {
     }
 
     async fn info(&self) -> Result<StorageInfo> {
-        let mut conn = self.get_connection().await?;
-
         let pattern = format!("{}:*", self.key_prefix);
-        let keys: Vec<String> = redis::cmd("KEYS")
-            .arg(&pattern)
-            .query_async(&mut conn)
-            .await
-            .map_err(|e| crate::error::StorageError::Connection(e.to_string()))?;
+        let keys = self.scan_keys(&pattern).await?;
 
-        // 计算文档数量
         let doc_pattern = format!("{}:doc:*", self.key_prefix);
-        let doc_keys: Vec<String> = redis::cmd("KEYS")
-            .arg(&doc_pattern)
-            .query_async(&mut conn)
-            .await
-            .map_err(|e| crate::error::StorageError::Connection(e.to_string()))?;
+        let doc_keys = self.scan_keys(&doc_pattern).await?;
 
-        // 计算索引项数量
         let index_pattern = format!("{}:index:*", self.key_prefix);
-        let index_keys: Vec<String> = redis::cmd("KEYS")
-            .arg(&index_pattern)
-            .query_async(&mut conn)
-            .await
-            .map_err(|e| crate::error::StorageError::Connection(e.to_string()))?;
+        let index_keys = self.scan_keys(&index_pattern).await?;
 
-        // 计算总大小
-        let mut total_size = 0;
+        let mut total_size = 0u64;
         for key in &keys {
-            let size: usize = redis::cmd("STRLEN")
+            let mut conn = self.get_connection().await?;
+            let size: Option<usize> = redis::cmd("STRLEN")
                 .arg(key)
                 .query_async(&mut conn)
                 .await
                 .map_err(|e| crate::error::StorageError::Connection(e.to_string()))?;
-            total_size += size;
+            total_size += size.unwrap_or(0) as u64;
         }
 
         Ok(StorageInfo {
             name: "RedisStorage".to_string(),
             version: "0.1.0".to_string(),
-            size: total_size as u64,
+            size: total_size,
             document_count: doc_keys.len(),
             index_count: index_keys.len(),
             is_connected: true,
@@ -362,22 +388,17 @@ impl StorageInterface for RedisStorage {
 }
 
 impl RedisStorage {
-    /// 批量删除文档（优化版本）
+    /// 批量删除文档（优化版本，使用 pipeline）
     pub async fn remove_batch(&mut self, ids: &[DocId]) -> Result<()> {
         if ids.is_empty() {
             return Ok(());
         }
 
+        let keys: Vec<String> = ids.iter().map(|&id| self.make_doc_key(id)).collect();
         let mut conn = self.get_connection().await?;
-        let mut keys_to_delete = Vec::new();
 
-        for &id in ids {
-            keys_to_delete.push(self.make_doc_key(id));
-        }
-
-        // 使用 DEL 命令批量删除
         let _: () = redis::cmd("DEL")
-            .arg(keys_to_delete.as_slice())
+            .arg(&keys)
             .query_async(&mut conn)
             .await
             .map_err(|e| crate::error::StorageError::Connection(e.to_string()))?;
@@ -414,8 +435,8 @@ impl RedisStorage {
 
     /// 获取操作统计
     pub fn get_operation_stats(&self) -> StorageMetrics {
-        let operation_count = self.operation_count.load(Ordering::Relaxed);
-        let total_latency = self.total_latency.load(Ordering::Relaxed);
+        let operation_count = self.operation_count.load(Ordering::Relaxed) as usize;
+        let total_latency = self.total_latency.load(Ordering::Relaxed) as usize;
         let avg_latency = if operation_count > 0 {
             total_latency / operation_count
         } else {
@@ -426,7 +447,7 @@ impl RedisStorage {
             operation_count,
             average_latency: avg_latency,
             memory_usage: self.get_memory_usage(),
-            error_count: 0, // 需要额外的错误计数器
+            error_count: self.error_count.load(Ordering::Relaxed) as usize,
         }
     }
 
@@ -441,29 +462,25 @@ impl RedisStorage {
 
     /// 记录操作完成（内部使用）
     fn record_operation_completion(&self, start_time: Instant) {
-        let latency = start_time.elapsed().as_micros() as usize;
+        let latency = start_time.elapsed().as_micros() as u64;
         self.operation_count.fetch_add(1, Ordering::Relaxed);
         self.total_latency.fetch_add(latency, Ordering::Relaxed);
     }
 
     /// 更新内存使用量估计
     async fn update_memory_usage(&self) -> Result<()> {
-        let mut conn = self.get_connection().await?;
         let pattern = format!("{}:*", self.key_prefix);
-        let keys: Vec<String> = redis::cmd("KEYS")
-            .arg(&pattern)
-            .query_async(&mut conn)
-            .await
-            .map_err(|e| crate::error::StorageError::Connection(e.to_string()))?;
+        let keys = self.scan_keys(&pattern).await?;
 
-        let mut total_size = 0;
+        let mut total_size = 0usize;
         for key in &keys {
-            let size: usize = redis::cmd("STRLEN")
+            let mut conn = self.get_connection().await?;
+            let size: Option<usize> = redis::cmd("STRLEN")
                 .arg(key)
                 .query_async(&mut conn)
                 .await
                 .map_err(|e| crate::error::StorageError::Connection(e.to_string()))?;
-            total_size += size;
+            total_size += size.unwrap_or(0);
         }
 
         self.memory_usage.store(total_size, Ordering::Relaxed);
