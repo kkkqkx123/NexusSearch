@@ -53,11 +53,11 @@ pub use api::embedded;
 pub use api::embedded::{
     EmbeddedIndex,
     EmbeddedSearchResult,
-    EmbeddedIndexConfig,
     EmbeddedBatch,
     EmbeddedBatchOperation,
     EmbeddedBatchResult,
     EmbeddedIndexStats,
+    EmbeddedIndexBuilder,
 };
 
 // Server API - available when "service" feature is enabled
@@ -100,10 +100,10 @@ pub use compress::{
     CompressCache, RadixTable, DEFAULT_CACHE_SIZE,
 };
 pub use config::{
-    Config, ConfigError, IndexProfile, StorageBackend, StorageConfig,
+    Config, StorageBackend, StorageConfig, EmbeddedConfig, EmbeddedConfigBuilder, TokenizeMode,
 };
 pub use encoder::{
-    Encoder, EncoderConfig,
+    Encoder,
 };
 pub use error::{
     CacheError, EncoderError, IndexError, InversearchError, SearchError, StorageError,
@@ -115,17 +115,15 @@ pub use highlight::{
     highlight_single_document_structured, HighlightProcessor,
 };
 pub use index::{
-    Register, ScoreFn, TokenizeMode,
+    Register, ScoreFn, TokenizeMode as IndexTokenizeMode,
 };
 pub use intersect::{
-    calculate_relevance_score, suggest_terms, SuggestionOptions, SuggestionResult,
+    SuggestionEngine,
 };
 pub use keystore::{
     DocId, KeystoreMap, KeystoreSet,
 };
-pub use metrics::{
-    IndexMetrics, MetricsCollector, SearchMetrics,
-};
+pub use metrics::Metrics;
 pub use resolver::{
     combine_search_results, exclusion, intersect_and, resolve_default, union_op, xor_op, Enricher,
     FieldSelector, Handler, HighlightConfig, MetadataSource, Resolver, ResolverError,
@@ -138,8 +136,7 @@ pub use search::{
     MultiFieldSearchOptions, SearchCache, SearchCoordinator, SingleTermResult,
 };
 pub use serialize::{
-    DeserializeError, DeserializeOptions, IndexSerializer, SerializeError, SerializeOptions,
-    Serializer,
+    SerializeConfig,
 };
 pub use storage::common::r#trait::StorageInterface;
 pub use storage::common::types::StorageInfo;

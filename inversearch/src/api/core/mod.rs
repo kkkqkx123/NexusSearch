@@ -25,7 +25,7 @@ pub use crate::compress::{
 };
 
 pub use crate::config::{
-    Config, StorageBackend, StorageConfig, WALConfig,
+    Config, StorageBackend, StorageConfig,
 };
 
 pub use crate::document::{

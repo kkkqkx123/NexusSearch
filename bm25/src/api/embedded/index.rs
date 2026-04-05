@@ -100,7 +100,7 @@ impl Bm25Index {
         let searcher = reader.searcher();
         
         let query_parser = QueryParser::for_index(
-            &self.manager.index(),
+            self.manager.index(),
             vec![self.schema.title, self.schema.content],
         );
         let query = query_parser.parse_query(query).map_err(|e| {

@@ -6,19 +6,12 @@ use tantivy::indexer::{LogMergePolicy, MergePolicy};
 use tantivy::{schema::*, Index, IndexReader, IndexWriter, ReloadPolicy};
 
 /// 重载策略配置
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum ReloadPolicyConfig {
-    /// 手动重载
     Manual,
-    /// 提交后延迟重载（默认，推荐）
+    #[default]
     OnCommitWithDelay,
-}
-
-impl Default for ReloadPolicyConfig {
-    fn default() -> Self {
-        ReloadPolicyConfig::OnCommitWithDelay
-    }
 }
 
 impl From<ReloadPolicyConfig> for ReloadPolicy {
@@ -31,19 +24,12 @@ impl From<ReloadPolicyConfig> for ReloadPolicy {
 }
 
 /// 合并策略类型
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum MergePolicyType {
-    /// 对数合并策略（默认，推荐）
+    #[default]
     Log,
-    /// 无合并（仅用于测试）
     NoMerge,
-}
-
-impl Default for MergePolicyType {
-    fn default() -> Self {
-        MergePolicyType::Log
-    }
 }
 
 /// LogMergePolicy 详细配置

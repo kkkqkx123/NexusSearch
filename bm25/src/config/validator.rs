@@ -70,7 +70,7 @@ pub type ValidationResult<T> = Result<T, ValidationError>;
 /// # Examples
 ///
 /// ```rust
-/// use bm25_service::config::validator::{ConfigValidator, ValidationError, ValidationResult};
+/// use bm25_service::config::{ConfigValidator, ValidationError, ValidationResult};
 ///
 /// struct MyConfig {
 ///     value: usize,

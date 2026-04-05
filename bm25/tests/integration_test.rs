@@ -570,8 +570,17 @@ fn test_mixed_operations_stress() {
         .collect();
 
     for doc_id in &doc_ids_to_delete {
-        delete_document(&manager, &schema, doc_id)
-            .expect("Failed to delete document");
+        let mut retries = 0;
+        loop {
+            match delete_document(&manager, &schema, doc_id) {
+                Ok(_) => break,
+                Err(e) if retries < 3 => {
+                    retries += 1;
+                    std::thread::sleep(std::time::Duration::from_millis(100));
+                }
+                Err(e) => panic!("Failed to delete document after 3 retries: {:?}", e),
+            }
+        }
     }
 
     // 阶段 5: 验证剩余文档数

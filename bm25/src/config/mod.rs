@@ -71,7 +71,7 @@ impl Bm25Config {
     /// // Set environment variables:
     /// // BM25_K1=1.5
     /// // BM25_B=0.8
-    /// let config = Bm25Config::from_env("BM25_")?;
+    /// let config = Bm25Config::from_env("BM25_").unwrap();
     /// ```
     pub fn from_env(prefix: &str) -> Result<Self, crate::config::loader::LoaderError> {
         let loader = EnvLoader::new(prefix);
@@ -90,10 +90,10 @@ impl Bm25Config {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```no_run
     /// use bm25_service::config::Bm25Config;
     ///
-    /// let config = Bm25Config::from_file("config.toml")?;
+    /// let config = Bm25Config::from_file("config.toml").unwrap();
     /// ```
     pub fn from_file(path: &str) -> Result<Self, crate::config::loader::LoaderError> {
         let loader = FileLoader::new(path);
@@ -227,7 +227,7 @@ impl SearchConfig {
     /// // Set environment variables:
     /// // SEARCH_DEFAULT_LIMIT=20
     /// // SEARCH_MAX_LIMIT=200
-    /// let config = SearchConfig::from_env("SEARCH_")?;
+    /// let config = SearchConfig::from_env("SEARCH_").unwrap();
     /// ```
     pub fn from_env(prefix: &str) -> Result<Self, crate::config::loader::LoaderError> {
         let loader = EnvLoader::new(prefix);
@@ -246,10 +246,10 @@ impl SearchConfig {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```no_run
     /// use bm25_service::config::SearchConfig;
     ///
-    /// let config = SearchConfig::from_file("config.toml")?;
+    /// let config = SearchConfig::from_file("config.toml").unwrap();
     /// ```
     pub fn from_file(path: &str) -> Result<Self, crate::config::loader::LoaderError> {
         let loader = FileLoader::new(path);

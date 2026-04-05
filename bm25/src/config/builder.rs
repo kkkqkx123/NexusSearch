@@ -10,7 +10,7 @@ use crate::config::{
 /// # Examples
 ///
 /// ```rust
-/// use bm25_service::config::IndexManagerConfig;
+/// use bm25_service::config::{IndexManagerConfig, ReloadPolicyConfig, MergePolicyType};
 ///
 /// let config = IndexManagerConfig::builder()
 ///     .writer_memory_mb(100)
@@ -45,6 +45,8 @@ impl IndexManagerConfigBuilder {
     /// # Examples
     ///
     /// ```rust
+    /// use bm25_service::config::IndexManagerConfig;
+    ///
     /// let config = IndexManagerConfig::builder()
     ///     .writer_memory_mb(100)  // 100MB
     ///     .build();
@@ -63,6 +65,8 @@ impl IndexManagerConfigBuilder {
     /// # Examples
     ///
     /// ```rust
+    /// use bm25_service::config::IndexManagerConfig;
+    ///
     /// let config = IndexManagerConfig::builder()
     ///     .writer_memory_bytes(100_000_000)  // 100MB
     ///     .build();
@@ -81,6 +85,8 @@ impl IndexManagerConfigBuilder {
     /// # Examples
     ///
     /// ```rust
+    /// use bm25_service::config::IndexManagerConfig;
+    ///
     /// let config = IndexManagerConfig::builder()
     ///     .writer_threads(4)
     ///     .build();
@@ -99,6 +105,8 @@ impl IndexManagerConfigBuilder {
     /// # Examples
     ///
     /// ```rust
+    /// use bm25_service::config::IndexManagerConfig;
+    ///
     /// let config = IndexManagerConfig::builder()
     ///     .reader_cache(true)
     ///     .build();
@@ -117,7 +125,7 @@ impl IndexManagerConfigBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use bm25_service::config::ReloadPolicyConfig;
+    /// use bm25_service::config::{IndexManagerConfig, ReloadPolicyConfig};
     ///
     /// let config = IndexManagerConfig::builder()
     ///     .reload_policy(ReloadPolicyConfig::OnCommitWithDelay)
@@ -137,7 +145,7 @@ impl IndexManagerConfigBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use bm25_service::config::MergePolicyType;
+    /// use bm25_service::config::{IndexManagerConfig, MergePolicyType};
     ///
     /// let config = IndexManagerConfig::builder()
     ///     .merge_policy(MergePolicyType::Log)
@@ -157,7 +165,7 @@ impl IndexManagerConfigBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use bm25_service::config::LogMergePolicyConfig;
+    /// use bm25_service::config::{IndexManagerConfig, LogMergePolicyConfig};
     ///
     /// let log_policy = LogMergePolicyConfig {
     ///     min_num_segments: 10,
@@ -179,6 +187,8 @@ impl IndexManagerConfigBuilder {
     /// # Examples
     ///
     /// ```rust
+    /// use bm25_service::config::IndexManagerConfig;
+    ///
     /// let config = IndexManagerConfig::builder()
     ///     .writer_memory_mb(100)
     ///     .writer_threads(4)
@@ -313,6 +323,8 @@ impl Bm25ConfigBuilder {
     /// # Examples
     ///
     /// ```rust
+    /// use bm25_service::config::Bm25Config;
+    ///
     /// let config = Bm25Config::builder().k1(1.5).build();
     /// ```
     pub fn k1(mut self, k1: f32) -> Self {
@@ -329,6 +341,8 @@ impl Bm25ConfigBuilder {
     /// # Examples
     ///
     /// ```rust
+    /// use bm25_service::config::Bm25Config;
+    ///
     /// let config = Bm25Config::builder().b(0.8).build();
     /// ```
     pub fn b(mut self, b: f32) -> Self {
@@ -345,6 +359,8 @@ impl Bm25ConfigBuilder {
     /// # Examples
     ///
     /// ```rust
+    /// use bm25_service::config::Bm25Config;
+    ///
     /// let config = Bm25Config::builder().avg_doc_length(150.0).build();
     /// ```
     pub fn avg_doc_length(mut self, avg_len: f32) -> Self {
@@ -362,6 +378,8 @@ impl Bm25ConfigBuilder {
     /// # Examples
     ///
     /// ```rust
+    /// use bm25_service::config::Bm25Config;
+    ///
     /// let config = Bm25Config::builder().field_weights(2.5, 1.0).build();
     /// ```
     pub fn field_weights(mut self, title: f32, content: f32) -> Self {
@@ -378,7 +396,7 @@ impl Bm25ConfigBuilder {
     /// # Examples
     ///
     /// ```rust
-    /// use bm25_service::config::FieldWeights;
+    /// use bm25_service::config::{Bm25Config, FieldWeights};
     ///
     /// let weights = FieldWeights::new(2.5, 1.0);
     /// let config = Bm25Config::builder().field_weights_struct(weights).build();
@@ -393,6 +411,8 @@ impl Bm25ConfigBuilder {
     /// # Examples
     ///
     /// ```rust
+    /// use bm25_service::config::Bm25Config;
+    ///
     /// let config = Bm25Config::builder()
     ///     .k1(1.5)
     ///     .b(0.8)
@@ -467,6 +487,8 @@ impl SearchConfigBuilder {
     /// # Examples
     ///
     /// ```rust
+    /// use bm25_service::config::SearchConfig;
+    ///
     /// let config = SearchConfig::builder().default_limit(20).build();
     /// ```
     pub fn default_limit(mut self, limit: usize) -> Self {
@@ -483,6 +505,8 @@ impl SearchConfigBuilder {
     /// # Examples
     ///
     /// ```rust
+    /// use bm25_service::config::SearchConfig;
+    ///
     /// let config = SearchConfig::builder().max_limit(200).build();
     /// ```
     pub fn max_limit(mut self, limit: usize) -> Self {
@@ -499,6 +523,8 @@ impl SearchConfigBuilder {
     /// # Examples
     ///
     /// ```rust
+    /// use bm25_service::config::SearchConfig;
+    ///
     /// let config = SearchConfig::builder().enable_highlight(true).build();
     /// ```
     pub fn enable_highlight(mut self, enabled: bool) -> Self {
@@ -515,6 +541,8 @@ impl SearchConfigBuilder {
     /// # Examples
     ///
     /// ```rust
+    /// use bm25_service::config::SearchConfig;
+    ///
     /// let config = SearchConfig::builder().highlight_fragment_size(250).build();
     /// ```
     pub fn highlight_fragment_size(mut self, size: usize) -> Self {
@@ -531,6 +559,8 @@ impl SearchConfigBuilder {
     /// # Examples
     ///
     /// ```rust
+    /// use bm25_service::config::SearchConfig;
+    ///
     /// let config = SearchConfig::builder().enable_spell_check(true).build();
     /// ```
     pub fn enable_spell_check(mut self, enabled: bool) -> Self {
@@ -547,6 +577,8 @@ impl SearchConfigBuilder {
     /// # Examples
     ///
     /// ```rust
+    /// use bm25_service::config::SearchConfig;
+    ///
     /// let config = SearchConfig::builder().fuzzy_matching(true).build();
     /// ```
     pub fn fuzzy_matching(mut self, enabled: bool) -> Self {
@@ -563,6 +595,8 @@ impl SearchConfigBuilder {
     /// # Examples
     ///
     /// ```rust
+    /// use bm25_service::config::SearchConfig;
+    ///
     /// let config = SearchConfig::builder().fuzzy_distance(2).build();
     /// ```
     pub fn fuzzy_distance(mut self, distance: u8) -> Self {
@@ -575,6 +609,8 @@ impl SearchConfigBuilder {
     /// # Examples
     ///
     /// ```rust
+    /// use bm25_service::config::SearchConfig;
+    ///
     /// let config = SearchConfig::builder()
     ///     .default_limit(20)
     ///     .max_limit(200)

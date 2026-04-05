@@ -2,49 +2,43 @@
 
 ## Summary
 
-- **Total Errors**: 3
-- **Total Warnings**: 0
+- **Total Errors**: 0
+- **Total Warnings**: 3
 - **Total Issues**: 3
-- **Unique Error Patterns**: 2
-- **Unique Warning Patterns**: 0
+- **Unique Error Patterns**: 0
+- **Unique Warning Patterns**: 2
 - **Files with Issues**: 2
 
 ## Error Statistics
 
-**Total Errors**: 3
-
-### Error Type Breakdown
-
-- **error[E0308]**: 2 errors
-- **error[E0596]**: 1 errors
-
-### Files with Errors (Top 10)
-
-- `src\index\manager.rs`: 2 errors
-- `src\service\grpc.rs`: 1 errors
+**Total Errors**: 0
 
 ## Warning Statistics
 
-**Total Warnings**: 0
+**Total Warnings**: 3
 
-## Detailed Error Categorization
+### Warning Type Breakdown
 
-### error[E0308]: arguments to this function are incorrect
+- **warning**: 3 warnings
 
-**Total Occurrences**: 2  
-**Unique Files**: 1
+### Files with Warnings (Top 10)
 
-#### `src\index\manager.rs`: 2 occurrences
+- `src\api\core\index.rs`: 2 warnings
+- `src\api\embedded\index.rs`: 1 warnings
 
-- Line 196: arguments to this function are incorrect
-- Line 212: arguments to this function are incorrect
+## Detailed Warning Categorization
 
-### error[E0596]: cannot borrow `writer` as mutable, as it is not declared as mutable: cannot borrow as mutable
+### warning: this expression creates a reference which is immediately dereferenced by the compiler: help: change this to: `self.manager.index()`
 
-**Total Occurrences**: 1  
-**Unique Files**: 1
+**Total Occurrences**: 3  
+**Unique Files**: 2
 
-#### `src\service\grpc.rs`: 1 occurrences
+#### `src\api\core\index.rs`: 2 occurrences
 
-- Line 228: cannot borrow `writer` as mutable, as it is not declared as mutable: cannot borrow as mutable
+- Line 18: this `impl` can be derived
+- Line 43: this `impl` can be derived
+
+#### `src\api\embedded\index.rs`: 1 occurrences
+
+- Line 103: this expression creates a reference which is immediately dereferenced by the compiler: help: change this to: `self.manager.index()`
 

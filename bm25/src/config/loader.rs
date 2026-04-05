@@ -5,15 +5,19 @@
 //! # Examples
 //!
 //! ```rust
-//! use bm25_service::config::loader::{ConfigLoader, EnvLoader, FileLoader, ConfigFormat};
+//! use bm25_service::config::{ConfigLoader, EnvLoader, ConfigFormat};
 //!
 //! // Load from environment variables with custom prefix
 //! let loader = EnvLoader::new("MYAPP_INDEX_");
-//! let env_vars = loader.load()?;
+//! let env_vars = loader.load().unwrap();
+//! ```
+//!
+//! ```no_run
+//! use bm25_service::config::{ConfigLoader, FileLoader};
 //!
 //! // Load from TOML file
 //! let loader = FileLoader::new("config.toml");
-//! let file_vars = loader.load()?;
+//! let file_vars = loader.load().unwrap();
 //! ```
 
 use std::collections::HashMap;
@@ -105,11 +109,11 @@ pub trait ConfigLoader {
 /// # Examples
 ///
 /// ```rust
-/// use bm25_service::config::loader::EnvLoader;
+/// use bm25_service::config::{EnvLoader, ConfigLoader};
 ///
 /// // Load environment variables with prefix "MYAPP_INDEX_"
 /// let loader = EnvLoader::new("MYAPP_INDEX_");
-/// let vars = loader.load()?;
+/// let vars = loader.load().unwrap();
 ///
 /// // Environment variables:
 /// // MYAPP_INDEX_WRITER_MEMORY_BUDGET=100000000
@@ -158,16 +162,16 @@ impl ConfigLoader for EnvLoader {
 ///
 /// # Examples
 ///
-/// ```rust
-/// use bm25_service::config::loader::{FileLoader, ConfigFormat};
+/// ```no_run
+/// use bm25_service::config::{ConfigLoader, FileLoader, ConfigFormat};
 ///
 /// // Load from TOML file (auto-detected)
 /// let loader = FileLoader::new("config.toml");
-/// let vars = loader.load()?;
+/// let vars = loader.load().unwrap();
 ///
 /// // Load from YAML file with explicit format
 /// let loader = FileLoader::new("config.yaml").format(ConfigFormat::Yaml);
-/// let vars = loader.load()?;
+/// let vars = loader.load().unwrap();
 /// ```
 pub struct FileLoader {
     path: String,
