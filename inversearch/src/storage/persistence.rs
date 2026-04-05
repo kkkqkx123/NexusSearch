@@ -4,14 +4,12 @@
 //! 参考 BM25 的 persistence.rs 实现
 
 use crate::error::Result;
-use crate::storage::common::r#trait::StorageInterface;
-use crate::storage::manager::{MutableStorageManager, StorageManager};
+use crate::storage::manager::StorageManager;
 use crate::{Index, DocId};
 use serde::{Deserialize, Serialize};
 use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 
 /// 索引元数据
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -51,6 +49,7 @@ pub struct BackupInfo {
 /// 持久化管理器
 pub struct PersistenceManager {
     base_path: PathBuf,
+    #[allow(dead_code)]
     storage_manager: Option<StorageManager>,
 }
 
@@ -148,8 +147,8 @@ impl PersistenceManager {
         let data_file = backup_path.join("index_data.bin");
         
         if !data_file.exists() {
-            return Err(crate::error::InversearchError::StorageError(
-                "Backup data file not found".to_string()
+            return Err(crate::error::InversearchError::Storage(
+                crate::error::StorageError::Generic("Backup data file not found".to_string())
             ));
         }
 
@@ -276,6 +275,7 @@ impl PersistenceManager {
     }
 
     /// 递归复制目录
+    #[allow(dead_code)]
     fn copy_dir(&self, src: &Path, dst: &Path) -> Result<()> {
         fs::create_dir_all(dst)?;
 
@@ -313,7 +313,7 @@ impl PersistenceManager {
     }
 
     /// 同步索引到存储（异步）
-    pub async fn sync_to_storage(&self, index: &Index, storage: &MutableStorageManager) -> Result<()> {
+    pub async fn sync_to_storage(&self, index: &Index, storage: &StorageManager) -> Result<()> {
         storage.commit(index, false, true).await
     }
 

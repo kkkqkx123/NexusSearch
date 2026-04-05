@@ -283,7 +283,7 @@ mod memory_tests {
         index.add(1, "test content for metrics", false).expect("add should succeed");
         storage.commit(&index, false, false).await.expect("commit should succeed");
 
-        let metrics = storage.get_operation_stats();
+        let metrics = storage.get_operation_stats().await;
         assert!(metrics.operation_count > 0);
         assert!(metrics.memory_usage > 0);
 

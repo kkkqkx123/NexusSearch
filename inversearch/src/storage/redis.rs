@@ -253,19 +253,19 @@ impl RedisStorage {
 
 #[async_trait::async_trait]
 impl StorageInterface for RedisStorage {
-    async fn mount(&mut self, _index: &Index) -> Result<()> {
+    async fn mount(&self, _index: &Index) -> Result<()> {
         Ok(())
     }
 
-    async fn open(&mut self) -> Result<()> {
+    async fn open(&self) -> Result<()> {
         Ok(())
     }
 
-    async fn close(&mut self) -> Result<()> {
+    async fn close(&self) -> Result<()> {
         Ok(())
     }
 
-    async fn destroy(&mut self) -> Result<()> {
+    async fn destroy(&self) -> Result<()> {
         let pattern = format!("{}:*", self.key_prefix);
         let keys = self.scan_keys(&pattern).await?;
 
@@ -284,7 +284,7 @@ impl StorageInterface for RedisStorage {
         Ok(())
     }
 
-    async fn commit(&mut self, index: &Index, _replace: bool, _append: bool) -> Result<()> {
+    async fn commit(&self, index: &Index, _replace: bool, _append: bool) -> Result<()> {
         let start_time = self.record_operation_start();
 
         let mut conn = self.get_connection().await?;
@@ -438,7 +438,7 @@ impl StorageInterface for RedisStorage {
         Ok(exists)
     }
 
-    async fn remove(&mut self, ids: &[DocId]) -> Result<()> {
+    async fn remove(&self, ids: &[DocId]) -> Result<()> {
         if ids.is_empty() {
             return Ok(());
         }
@@ -458,7 +458,7 @@ impl StorageInterface for RedisStorage {
         Ok(())
     }
 
-    async fn clear(&mut self) -> Result<()> {
+    async fn clear(&self) -> Result<()> {
         self.destroy().await
     }
 
@@ -488,7 +488,7 @@ impl StorageInterface for RedisStorage {
 
 impl RedisStorage {
     /// 批量删除文档（优化版本，使用 pipeline）
-    pub async fn remove_batch(&mut self, ids: &[DocId]) -> Result<()> {
+    pub async fn remove_batch(&self, ids: &[DocId]) -> Result<()> {
         if ids.is_empty() {
             return Ok(());
         }

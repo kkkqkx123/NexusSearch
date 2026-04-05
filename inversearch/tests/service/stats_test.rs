@@ -12,7 +12,7 @@ use tonic::Request;
 /// 测试获取空索引统计
 #[tokio::test]
 async fn test_stats_empty_index() {
-    let service = InversearchService::new();
+    let service = InversearchService::new().await;
 
     let stats_request = Request::new(GetStatsRequest {});
     let response = InversearchServiceTrait::get_stats(&service, stats_request).await.unwrap();
@@ -25,7 +25,7 @@ async fn test_stats_empty_index() {
 /// 测试添加文档后统计更新
 #[tokio::test]
 async fn test_stats_after_add() {
-    let service = InversearchService::new();
+    let service = InversearchService::new().await;
 
     // 添加 5 个文档
     for i in 1..=5 {
@@ -48,7 +48,7 @@ async fn test_stats_after_add() {
 /// 测试删除文档后统计更新
 #[tokio::test]
 async fn test_stats_after_remove() {
-    let service = InversearchService::new();
+    let service = InversearchService::new().await;
 
     // 添加 5 个文档
     for i in 1..=5 {
@@ -77,7 +77,7 @@ async fn test_stats_after_remove() {
 /// 测试清空索引后统计
 #[tokio::test]
 async fn test_stats_after_clear() {
-    let service = InversearchService::new();
+    let service = InversearchService::new().await;
 
     // 添加一些文档
     for i in 1..=10 {

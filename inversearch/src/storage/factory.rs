@@ -25,8 +25,8 @@ impl StorageFactory {
     /// # Examples
     ///
     /// ```rust
-    /// use inversearch::config::Config;
-    /// use inversearch::storage::factory::StorageFactory;
+    /// use inversearch_service::config::Config;
+    /// use inversearch_service::storage::factory::StorageFactory;
     ///
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// let config = Config::default();
@@ -167,9 +167,9 @@ impl StorageFactory {
 
         #[cfg(not(feature = "store-cold-warm-cache"))]
         {
-            use crate::error::InversearchError;
-            Err(InversearchError::StorageError(
-                "Cold-warm cache storage is not enabled".to_string()
+            use crate::error::{InversearchError, StorageError};
+            Err(InversearchError::Storage(
+                StorageError::Generic("Cold-warm cache storage is not enabled".to_string())
             ))
         }
     }

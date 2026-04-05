@@ -972,23 +972,23 @@ impl ColdWarmCacheManager {
 
 #[async_trait::async_trait]
 impl StorageInterface for ColdWarmCacheManager {
-    async fn mount(&mut self, _index: &Index) -> Result<()> {
+    async fn mount(&self, _index: &Index) -> Result<()> {
         Ok(())
     }
 
-    async fn open(&mut self) -> Result<()> {
+    async fn open(&self) -> Result<()> {
         Ok(())
     }
 
-    async fn close(&mut self) -> Result<()> {
+    async fn close(&self) -> Result<()> {
         self.shutdown().await
     }
 
-    async fn destroy(&mut self) -> Result<()> {
+    async fn destroy(&self) -> Result<()> {
         self.clear().await
     }
 
-    async fn commit(&mut self, _index: &Index, _replace: bool, _append: bool) -> Result<()> {
+    async fn commit(&self, _index: &Index, _replace: bool, _append: bool) -> Result<()> {
         Ok(())
     }
 
@@ -1012,11 +1012,11 @@ impl StorageInterface for ColdWarmCacheManager {
         Ok(false)
     }
 
-    async fn remove(&mut self, _ids: &[DocId]) -> Result<()> {
+    async fn remove(&self, _ids: &[DocId]) -> Result<()> {
         Ok(())
     }
 
-    async fn clear(&mut self) -> Result<()> {
+    async fn clear(&self) -> Result<()> {
         self.clear().await
     }
 

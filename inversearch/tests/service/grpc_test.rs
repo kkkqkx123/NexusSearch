@@ -15,7 +15,7 @@ use tonic::Request;
 /// 测试添加文档接口
 #[tokio::test]
 async fn test_grpc_add_document() {
-    let service = InversearchService::new();
+    let service = InversearchService::new().await;
 
     let request = Request::new(AddDocumentRequest {
         id: 1,
@@ -33,7 +33,7 @@ async fn test_grpc_add_document() {
 /// 测试添加多个文档
 #[tokio::test]
 async fn test_grpc_add_multiple_documents() {
-    let service = InversearchService::new();
+    let service = InversearchService::new().await;
 
     for i in 1..=5 {
         let request = Request::new(AddDocumentRequest {
@@ -51,7 +51,7 @@ async fn test_grpc_add_multiple_documents() {
 /// 测试更新文档接口
 #[tokio::test]
 async fn test_grpc_update_document() {
-    let service = InversearchService::new();
+    let service = InversearchService::new().await;
 
     // 先添加文档
     let add_request = Request::new(AddDocumentRequest {
@@ -77,7 +77,7 @@ async fn test_grpc_update_document() {
 /// 测试删除文档接口
 #[tokio::test]
 async fn test_grpc_remove_document() {
-    let service = InversearchService::new();
+    let service = InversearchService::new().await;
 
     // 先添加文档
     let add_request = Request::new(AddDocumentRequest {
@@ -101,7 +101,7 @@ async fn test_grpc_remove_document() {
 /// 测试搜索接口
 #[tokio::test]
 async fn test_grpc_search() {
-    let service = InversearchService::new();
+    let service = InversearchService::new().await;
 
     // 添加测试文档
     for i in 1..=3 {
@@ -137,7 +137,7 @@ async fn test_grpc_search() {
 /// 测试清空索引接口
 #[tokio::test]
 async fn test_grpc_clear_index() {
-    let service = InversearchService::new();
+    let service = InversearchService::new().await;
 
     // 添加一些文档
     for i in 1..=5 {
@@ -160,7 +160,7 @@ async fn test_grpc_clear_index() {
 /// 测试空查询搜索
 #[tokio::test]
 async fn test_grpc_search_empty_query() {
-    let service = InversearchService::new();
+    let service = InversearchService::new().await;
 
     let search_request = Request::new(SearchRequest {
         query: "".to_string(),
@@ -184,7 +184,7 @@ async fn test_grpc_search_empty_query() {
 /// 测试搜索不存在的内容
 #[tokio::test]
 async fn test_grpc_search_nonexistent() {
-    let service = InversearchService::new();
+    let service = InversearchService::new().await;
 
     let search_request = Request::new(SearchRequest {
         query: "xyznonexistent".to_string(),

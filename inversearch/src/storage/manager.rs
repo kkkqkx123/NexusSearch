@@ -128,6 +128,16 @@ impl StorageManager {
         Ok(())
     }
 
+    /// 删除文档（别名，与 remove 功能相同）
+    pub async fn remove_documents(&self, ids: &[DocId]) -> Result<()> {
+        self.remove(ids).await
+    }
+
+    /// 挂载索引
+    pub async fn mount_index(&self, index: &Index) -> Result<()> {
+        self.mount(index).await
+    }
+
     /// 清空数据
     pub async fn clear(&self) -> Result<()> {
         Ok(())
@@ -145,7 +155,7 @@ impl StorageManager {
             version: env!("CARGO_PKG_VERSION").to_string(),
             size: 0,
             document_count: 0,
-            term_count: 0,
+            index_count: 0,
             is_connected: true,
         })
     }

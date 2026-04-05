@@ -160,15 +160,32 @@ pub struct InversearchService {
 
 impl Default for InversearchService {
     fn default() -> Self {
-        Self::new()
+        // 创建同步版本，用于 Default trait
+        let index = Index::new(IndexOptions::default()).expect("Failed to create index");
+        let index = Arc::new(RwLock::new(index));
+        
+        // 使用阻塞运行时创建存储
+        let storage = tokio::task::block_in_place(|| {
+            tokio::runtime::Handle::current().block_on(async {
+                StorageManagerBuilder::build_default().await
+                    .expect("Failed to create storage")
+            })
+        });
+
+        Self {
+            index,
+            storage,
+            config: Config::default(),
+            storage_sync_enabled: true,
+        }
     }
 }
 
 impl InversearchService {
     /// Create a new service instance with default configuration
-    pub fn new() -> Self {
+    pub async fn new() -> Self {
         let config = Config::default();
-        Self::with_config(config)
+        Self::with_config_async(config).await
     }
 
     /// Create a new service instance with custom configuration
@@ -180,7 +197,7 @@ impl InversearchService {
         
         // 尝试从存储恢复索引数据
         let storage_sync_enabled = if config.storage.enabled {
-            match storage.mount(&index.read().await).await {
+            match storage.mount(&*index.read().await).await {
                 Ok(_) => {
                     tracing::info!("Storage mounted successfully");
                     true
@@ -193,28 +210,6 @@ impl InversearchService {
         } else {
             false
         };
-
-        Self {
-            index,
-            storage,
-            config,
-            storage_sync_enabled,
-        }
-    }
-
-    /// Create a new service instance with custom configuration (sync version)
-    pub fn with_config(config: Config) -> Self {
-        let index = Index::new(IndexOptions::default()).expect("Failed to create index");
-        let index = Arc::new(RwLock::new(index));
-
-        let (storage, storage_sync_enabled) =
-            tokio::task::block_in_place(|| {
-                tokio::runtime::Handle::current().block_on(async {
-                    let storage = StorageManagerBuilder::build_default().await
-                        .expect("Failed to create storage");
-                    (storage, config.storage.enabled)
-                })
-            });
 
         Self {
             index,
@@ -244,12 +239,13 @@ impl InversearchService {
     ) -> Self {
         let index = Index::new(IndexOptions::default()).expect("Failed to create index");
         let index = Arc::new(RwLock::new(index));
+        let storage_sync_enabled = config.storage.enabled;
 
         Self {
             index,
             storage,
             config,
-            storage_sync_enabled: config.storage.enabled,
+            storage_sync_enabled,
         }
     }
 
@@ -265,7 +261,7 @@ impl InversearchService {
         }
 
         let index = self.index.read().await;
-        match self.storage.commit(&*index, replace, append).await {
+        match self.storage.commit(&index, replace, append).await {
             Ok(_) => {
                 tracing::debug!("Index synced to storage successfully");
                 Ok(())
@@ -278,13 +274,14 @@ impl InversearchService {
     }
 
     /// 从存储同步索引
+    #[allow(dead_code)]
     async fn sync_from_storage(&self) -> Result<(), crate::error::InversearchError> {
         if !self.storage_sync_enabled {
             return Ok(());
         }
 
         let index = self.index.read().await;
-        match self.storage.mount(&*index).await {
+        match self.storage.mount(&index).await {
             Ok(_) => {
                 tracing::debug!("Index synced from storage successfully");
                 Ok(())
@@ -612,7 +609,7 @@ impl InversearchServiceTrait for InversearchService {
 /// Run the gRPC server
 pub async fn run_server(config: ServiceConfig) -> Result<(), Box<dyn std::error::Error>> {
     let addr = format!("{}:{}", config.host, config.port).parse::<SocketAddr>()?;
-    let service = InversearchService::new();
+    let service = InversearchService::new().await;
 
     tracing::info!("Inversearch service listening on {}", addr);
 
@@ -625,9 +622,9 @@ pub async fn run_server(config: ServiceConfig) -> Result<(), Box<dyn std::error:
 }
 
 /// Run the gRPC server with custom storage
-pub async fn run_server_with_storage<S: StorageInterface + Send + Sync + 'static>(
+pub async fn run_server_with_storage(
     config: ServiceConfig,
-    storage: S,
+    storage: StorageManager,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let addr = format!("{}:{}", config.host, config.port).parse::<SocketAddr>()?;
     let service = InversearchService::with_storage(storage);
@@ -653,9 +650,9 @@ mod tests {
         assert_eq!(config.port, 50051);
     }
 
-    #[test]
-    fn test_service_creation() {
-        let _service = InversearchService::new();
+    #[tokio::test]
+    async fn test_service_creation() {
+        let _service = InversearchService::new().await;
         // Service should be created successfully
     }
 }
