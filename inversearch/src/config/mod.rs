@@ -70,6 +70,12 @@ pub struct EmbeddedConfigBuilder {
     config: EmbeddedConfig,
 }
 
+impl Default for EmbeddedConfigBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl EmbeddedConfigBuilder {
     pub fn new() -> Self {
         Self {

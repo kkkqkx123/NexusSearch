@@ -67,11 +67,7 @@ impl EmbeddedIndex {
     pub fn with_config(config: EmbeddedConfig) -> Result<Self> {
         let index_options = config.to_index_options();
         let index = Index::new(index_options)?;
-        let document_store = if config.store_documents {
-            HashMap::new()
-        } else {
-            HashMap::new()
-        };
+        let document_store = HashMap::new();
         Ok(Self { index, config, document_store })
     }
 

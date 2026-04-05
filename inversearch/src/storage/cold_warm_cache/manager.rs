@@ -69,7 +69,6 @@ impl Default for IndexData {
 struct HotCacheEntry {
     data: IndexData,
     last_access: Instant,
-    access_count: AtomicU64,
     size: usize,
 }
 
@@ -78,13 +77,8 @@ impl HotCacheEntry {
         Self {
             data,
             last_access: Instant::now(),
-            access_count: AtomicU64::new(1),
             size,
         }
-    }
-
-    fn record_access(&self) {
-        self.access_count.fetch_add(1, Ordering::Relaxed);
     }
 }
 
@@ -92,7 +86,7 @@ impl HotCacheEntry {
 struct WarmCacheEntry {
     file_path: PathBuf,
     last_access: Instant,
-    access_count: AtomicU64,
+    #[allow(dead_code)]
     size: usize,
     compressed: bool,
 }
@@ -102,7 +96,6 @@ impl WarmCacheEntry {
         Self {
             file_path,
             last_access: Instant::now(),
-            access_count: AtomicU64::new(1),
             size,
             compressed,
         }
@@ -125,15 +118,13 @@ impl WarmCacheEntry {
 struct ColdStorageEntry {
     file_path: PathBuf,
     compressed: bool,
-    size: usize,
 }
 
 impl ColdStorageEntry {
-    fn new(file_path: PathBuf, size: usize, compressed: bool) -> Self {
+    fn new(file_path: PathBuf, compressed: bool) -> Self {
         Self {
             file_path,
             compressed,
-            size,
         }
     }
 }
@@ -177,6 +168,7 @@ struct WALWriter {
     entry_count: usize,
 }
 
+#[allow(dead_code)]
 impl WALWriter {
     async fn new(file_path: PathBuf) -> Result<Self> {
         let file = tokio_fs::OpenOptions::new()
@@ -222,6 +214,8 @@ impl WALWriter {
     }
 
     fn entry_count(&self) -> usize {
+        #[allow(dead_code)]
+        let _ = self.entry_count;
         self.entry_count
     }
 }
@@ -449,6 +443,7 @@ impl CacheStats {
     }
 }
 
+#[allow(dead_code)]
 pub struct ColdWarmCacheManager {
     config: ColdWarmCacheConfig,
     hot_cache: Arc<DashMap<String, Arc<HotCacheEntry>>>,
@@ -544,7 +539,6 @@ impl ColdWarmCacheManager {
 
     pub async fn get_index(&self, index_name: &str) -> Result<Option<IndexData>> {
         if let Some(entry) = self.hot_cache.get(index_name) {
-            entry.record_access();
             self.stats.hot_hit.fetch_add(1, Ordering::Relaxed);
             return Ok(Some(entry.data.clone()));
         }
@@ -813,7 +807,7 @@ impl ColdWarmCacheManager {
 
         atomic_write(&file_path, &final_bytes).await?;
 
-        let entry = ColdStorageEntry::new(file_path, final_bytes.len(), compressed);
+        let entry = ColdStorageEntry::new(file_path, compressed);
         self.cold_storage.insert(index_name.to_string(), entry);
 
         Ok(())
