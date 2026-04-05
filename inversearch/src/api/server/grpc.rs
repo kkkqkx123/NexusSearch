@@ -14,6 +14,8 @@ use crate::api::server::proto::*;
 
 // Import core library types
 use crate::api::core::{Index, SearchOptions};
+use crate::IndexOptions;
+use crate::ServiceConfig;
 
 // Import storage module
 use crate::storage::common::r#trait::StorageInterface;

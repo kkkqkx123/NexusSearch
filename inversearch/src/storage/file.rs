@@ -4,7 +4,7 @@
 
 use crate::error::Result;
 use crate::r#type::{DocId, EnrichedSearchResults, SearchResults};
-use crate::storage::base::StorageBase;
+use crate::storage::common::base::StorageBase;
 use crate::storage::common::io::{load_from_file, save_to_file};
 use crate::storage::common::{FileStorageData, StorageInfo, StorageInterface, StorageMetrics};
 use crate::Index;

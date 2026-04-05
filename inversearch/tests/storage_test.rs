@@ -9,7 +9,7 @@
 mod common;
 
 use inversearch_service::storage::{
-    base::StorageBase,
+    common::base::StorageBase,
     common::StorageInterface,
 };
 use inversearch_service::Index;

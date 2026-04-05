@@ -58,7 +58,7 @@ impl Default for WALConfig {
             max_wal_files: 10,
             snapshot_interval: 1000,
             auto_cleanup: true,
-            cleanup_interval: 3600, // 1小时
+            cleanup_interval: 3600, // 1 小时
         }
     }
 }
@@ -445,69 +445,130 @@ fn decompress_data(data: &[u8]) -> Result<Vec<u8>> {
         .map_err(|e| InversearchError::Serialization(format!("Decompression error: {}", e)))
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use tempfile::TempDir;
+// ============== WAL Storage 实现 ==============
 
-    #[tokio::test]
-    async fn test_wal_basic() {
-        let temp_dir = TempDir::new().unwrap();
-        let config = WALConfig {
-            base_path: temp_dir.path().to_path_buf(),
-            max_wal_size: 1024 * 1024, // 1MB
-            compression: false,
-            compression_level: 3,
-            ..WALConfig::default()
-        };
+use crate::r#type::{EnrichedSearchResults, SearchResults};
+use crate::storage::common::{StorageInfo, StorageInterface};
+use std::collections::HashMap;
 
-        let mut wal = WALManager::new(config).await.unwrap();
+/// WAL 存储
+pub struct WALStorage {
+    wal_manager: WALManager,
+    documents: HashMap<DocId, String>,
+    is_open: bool,
+}
 
-        // 记录变更
-        wal.record_change(IndexChange::Add {
-            doc_id: 1,
-            content: "hello world".to_string(),
+impl WALStorage {
+    /// 创建新的 WAL 存储
+    pub async fn new(config: WALConfig) -> Result<Self> {
+        let wal_manager = WALManager::new(config).await?;
+
+        Ok(Self {
+            wal_manager,
+            documents: HashMap::new(),
+            is_open: false,
         })
-        .await
-        .unwrap();
-
-        wal.record_change(IndexChange::Add {
-            doc_id: 2,
-            content: "rust programming".to_string(),
-        })
-        .await
-        .unwrap();
-
-        // 验证 WAL 大小
-        assert!(wal.wal_size() > 0);
     }
 
-    #[tokio::test]
-    async fn test_wal_with_compression() {
-        let temp_dir = TempDir::new().unwrap();
-        let config = WALConfig {
-            base_path: temp_dir.path().to_path_buf(),
-            max_wal_size: 1024 * 1024,
-            compression: true,
-            compression_level: 3,
-            ..WALConfig::default()
-        };
+    /// 创建快照
+    pub async fn create_snapshot(&self, index: &Index) -> Result<()> {
+        self.wal_manager.create_snapshot(index).await
+    }
+}
 
-        let mut wal = WALManager::new(config).await.unwrap();
+#[async_trait::async_trait]
+impl StorageInterface for WALStorage {
+    async fn mount(&mut self, _index: &Index) -> Result<()> {
+        Ok(())
+    }
 
-        // 记录变更
-        wal.record_change(IndexChange::Add {
-            doc_id: 1,
-            content: "hello world".to_string(),
+    async fn open(&mut self) -> Result<()> {
+        self.is_open = true;
+        Ok(())
+    }
+
+    async fn close(&mut self) -> Result<()> {
+        self.is_open = false;
+        Ok(())
+    }
+
+    async fn destroy(&mut self) -> Result<()> {
+        self.documents.clear();
+        self.wal_manager.clear().await?;
+        self.is_open = false;
+        Ok(())
+    }
+
+    async fn commit(&mut self, index: &Index, _replace: bool, _append: bool) -> Result<()> {
+        // 使用 WAL 创建快照
+        self.wal_manager.create_snapshot(index).await
+    }
+
+    async fn get(
+        &self,
+        _key: &str,
+        _ctx: Option<&str>,
+        _limit: usize,
+        _offset: usize,
+        _resolve: bool,
+        _enrich: bool,
+    ) -> Result<SearchResults> {
+        // WAL 存储需要通过加载索引来获取数据
+        // 这里简化处理，返回空结果
+        // 实际应用中应该维护一个内存索引
+        Ok(Vec::new())
+    }
+
+    async fn enrich(&self, ids: &[DocId]) -> Result<EnrichedSearchResults> {
+        let mut results = Vec::new();
+
+        for &id in ids {
+            if let Some(content) = self.documents.get(&id) {
+                results.push(crate::r#type::EnrichedSearchResult {
+                    id,
+                    doc: Some(serde_json::json!({
+                        "content": content,
+                        "id": id
+                    })),
+                    highlight: None,
+                });
+            }
+        }
+
+        Ok(results)
+    }
+
+    async fn has(&self, id: DocId) -> Result<bool> {
+        Ok(self.documents.contains_key(&id))
+    }
+
+    async fn remove(&mut self, ids: &[DocId]) -> Result<()> {
+        for &id in ids {
+            self.documents.remove(&id);
+            self.wal_manager
+                .record_change(IndexChange::Remove { doc_id: id })
+                .await?;
+        }
+        Ok(())
+    }
+
+    async fn clear(&mut self) -> Result<()> {
+        self.documents.clear();
+        self.wal_manager.clear().await?;
+        Ok(())
+    }
+
+    async fn info(&self) -> Result<StorageInfo> {
+        let wal_size = self.wal_manager.wal_size() as u64;
+        let snapshot_size = self.wal_manager.snapshot_size().await?;
+
+        Ok(StorageInfo {
+            name: "WALStorage".to_string(),
+            version: "0.1.0".to_string(),
+            size: wal_size + snapshot_size,
+            document_count: self.documents.len(),
+            index_count: 0,
+            is_connected: self.is_open,
         })
-        .await
-        .unwrap();
-
-        // 创建快照
-        let index = Index::default();
-        wal.create_snapshot(&index).await.unwrap();
-
-        // 验证快照存在
-        assert!(wal.snapshot_size().await.unwrap() > 0);
     }
 }

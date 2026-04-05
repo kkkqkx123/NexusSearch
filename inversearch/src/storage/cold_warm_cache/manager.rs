@@ -26,7 +26,7 @@ use tokio::io::AsyncWriteExt;
 use tokio::sync::Mutex;
 use tokio::time::{Duration, Instant};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct IndexData {
     pub data: HashMap<String, Vec<DocId>>,
     pub context_data: HashMap<String, HashMap<String, Vec<DocId>>>,
@@ -51,16 +51,6 @@ impl From<IndexData> for FileStorageData {
             data: index_data.data,
             context_data: index_data.context_data,
             documents: index_data.documents,
-        }
-    }
-}
-
-impl Default for IndexData {
-    fn default() -> Self {
-        Self {
-            data: HashMap::new(),
-            context_data: HashMap::new(),
-            documents: HashMap::new(),
         }
     }
 }
@@ -230,7 +220,11 @@ impl WALManager {
         let checkpoint_path = config.base_path.join("checkpoint.json");
         let checkpoint_info = if checkpoint_path.exists() {
             let bytes = tokio_fs::read(&checkpoint_path).await?;
-            serde_json::from_slice(&bytes).unwrap_or_default()
+            if bytes.is_empty() {
+                CheckpointInfo::default()
+            } else {
+                serde_json::from_slice(&bytes).unwrap_or_default()
+            }
         } else {
             CheckpointInfo::default()
         };
@@ -239,7 +233,7 @@ impl WALManager {
         let mut entries = tokio_fs::read_dir(&config.base_path).await?;
         while let Some(entry) = entries.next_entry().await? {
             let path = entry.path();
-            if path.extension().map_or(false, |ext| ext == "wal") {
+            if path.extension().is_some_and(|ext| ext == "wal") {
                 wal_files.push(path);
             }
         }
@@ -342,6 +336,17 @@ impl WALManager {
     }
 
     async fn read_wal_file(&self, path: &PathBuf) -> Result<Vec<WALEntry>> {
+        // Check if file exists and get its size first
+        let metadata = match tokio_fs::metadata(path).await {
+            Ok(m) => m,
+            Err(_) => return Ok(Vec::new()),
+        };
+
+        // Handle empty WAL files
+        if metadata.len() == 0 {
+            return Ok(Vec::new());
+        }
+
         let file_data = load_from_file(path).await?;
         let bytes = bincode::serialize(&file_data)?;
         let mut entries = Vec::new();
@@ -531,7 +536,7 @@ impl ColdWarmCacheManager {
                 size += k.len() + v.len() * std::mem::size_of::<DocId>();
             }
         }
-        for (_id, doc) in &data.documents {
+        for doc in data.documents.values() {
             size += std::mem::size_of::<DocId>() + doc.len();
         }
         size

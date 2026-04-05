@@ -150,10 +150,7 @@ pub use storage::file::FileStorage;
 pub use storage::redis::RedisStorage;
 
 #[cfg(feature = "store-wal")]
-pub use storage::wal_storage::WALStorage;
-
-#[cfg(feature = "store-wal")]
-pub use storage::wal::{IndexChange, WALManager};
+pub use storage::wal::{WALStorage, WALManager, IndexChange};
 
 #[cfg(feature = "store-wal")]
 pub use config::WALConfig as StorageWalConfig;

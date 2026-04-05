@@ -28,7 +28,7 @@ use crate::storage::file::FileStorage;
 use crate::storage::redis::{RedisStorage, RedisStorageConfig};
 
 #[cfg(feature = "store-wal")]
-use crate::storage::wal_storage::WALStorage;
+use crate::storage::wal::WALStorage;
 
 // Import config
 use crate::api::server::config::ServiceConfig;

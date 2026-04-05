@@ -133,6 +133,11 @@ impl RedisStorage {
         })
     }
 
+    /// Get the Redis storage configuration
+    pub fn config(&self) -> &RedisStorageConfig {
+        &self.config
+    }
+
     fn make_key(&self, key: &str) -> String {
         format!("{}:{}", self.key_prefix, key)
     }
@@ -459,7 +464,7 @@ impl StorageInterface for RedisStorage {
 
     async fn info(&self) -> Result<StorageInfo> {
         let pattern = format!("{}:*", self.key_prefix);
-        let keys = self.scan_keys(&pattern).await?;
+        let _keys = self.scan_keys(&pattern).await?;
 
         let doc_pattern = format!("{}:doc:*", self.key_prefix);
         let doc_keys = self.scan_keys(&doc_pattern).await?;

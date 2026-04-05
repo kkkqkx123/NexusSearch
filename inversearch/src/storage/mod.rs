@@ -7,25 +7,28 @@
 //! ```text
 //! storage/
 //! ├── common/              # 公共组件（类型、trait、工具函数）
-//! │   ├── types.rs         # 共享类型定义
-//! │   ├── trait.rs         # 存储接口 trait
-//! │   ├── io.rs            # 文件 I/O 操作
+//! │   ├── mod.rs
+//! │   ├── base.rs          # 存储基类
+//! │   ├── config.rs        # 存储配置
 //! │   ├── compression.rs   # 压缩/解压缩
-//! │   └── metrics.rs       # 性能指标
-//! ├── base.rs              # 存储基类
-//! ├── utils.rs             # 工具函数
+//! │   ├── error.rs         # 存储错误类型
+//! │   ├── io.rs            # 文件 I/O 操作
+//! │   ├── metrics.rs       # 性能指标
+//! │   ├── trait.rs         # 存储接口 trait
+//! │   ├── types.rs         # 共享类型定义
+//! │   └── utils.rs         # 工具函数
 //! ├── file.rs              # 文件存储实现
 //! ├── redis.rs             # Redis 存储实现
-//! ├── wal.rs               # WAL 模块
-//! ├── wal_storage.rs       # WAL 存储实现
-//! ├── cold_warm_cache/     # 冷热缓存存储实现（默认）
-//! │   ├── mod.rs
-//! │   ├── config.rs
-//! │   ├── manager.rs
-//! │   ├── policy.rs
-//! │   ├── stats.rs
-//! │   └── background.rs
-//! └── memory.rs            # 内存存储实现（仅用于测试）
+//! ├── wal.rs               # WAL 预写日志
+//! ├── memory.rs            # 内存存储实现（测试用）
+//! ├── factory.rs           # 存储工厂
+//! └── cold_warm_cache/     # 冷热缓存存储实现（默认）
+//!     ├── mod.rs
+//!     ├── config.rs
+//!     ├── manager.rs
+//!     ├── policy.rs
+//!     ├── stats.rs
+//!     └── background.rs
 //! ```
 //!
 //! ## 条件编译特性
@@ -38,14 +41,7 @@
 // 公共组件 - 所有存储实现共享
 pub mod common;
 
-// 存储基类
-pub mod base;
-
-// 工具函数
-pub mod utils;
-
 // 条件编译的存储实现
-
 #[cfg(feature = "store-file")]
 pub mod file;
 
@@ -54,9 +50,6 @@ pub mod redis;
 
 #[cfg(feature = "store-wal")]
 pub mod wal;
-
-#[cfg(feature = "store-wal")]
-pub mod wal_storage;
 
 // 冷热缓存存储实现（默认）
 pub mod cold_warm_cache;
@@ -70,6 +63,8 @@ pub mod factory;
 // 重新导出常用类型和 trait，方便使用
 pub use common::{
     compression::{compress_data, decompress_data},
+    config::{StorageConfig, StorageType},
+    error::{StorageError, StorageResult},
     io::{atomic_write, get_file_size, load_from_file, remove_file_safe, save_to_file},
     metrics::{MetricsCollector, OperationTimer},
     FileStorageData, StorageInfo, StorageInterface, StorageMetrics,

@@ -103,10 +103,7 @@ pub use crate::storage::file::FileStorage;
 pub use crate::storage::redis::RedisStorage;
 
 #[cfg(feature = "store-wal")]
-pub use crate::storage::wal_storage::WALStorage;
-
-#[cfg(feature = "store-wal")]
-pub use crate::storage::wal::{IndexChange, WALManager};
+pub use crate::storage::wal::{WALStorage, WALManager, IndexChange};
 
 #[cfg(feature = "store-wal")]
 pub use crate::config::WALConfig as StorageWalConfig;
