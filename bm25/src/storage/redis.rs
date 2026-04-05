@@ -269,7 +269,7 @@ impl StorageInterface for RedisStorage {
 
         let mut pipe = redis::pipe();
         
-        // 使用 HINCRBYFLOAT 实现 TF 的原子累加
+        // 使用 HINCRBYFLOAT 实现 TF 的原子累加，使用 "default" 作为默认 doc_id
         pipe.cmd("HINCRBYFLOAT")
             .arg(self.make_tf_key(term))
             .arg("default")
@@ -382,12 +382,13 @@ impl StorageInterface for RedisStorage {
         Ok(df)
     }
 
-    async fn get_tf(&self, term: &str, _doc_id: &str) -> Result<Option<f32>> {
+    async fn get_tf(&self, term: &str, doc_id: &str) -> Result<Option<f32>> {
         let mut conn = self.get_connection().await?;
 
+        // 从 Hash 中获取特定 doc_id 的 TF 值
         let tf: Option<f32> = redis::cmd("HGET")
             .arg(self.make_tf_key(term))
-            .arg("default")
+            .arg(doc_id)
             .query_async(&mut *conn)
             .await
             .map_err(|e| {
@@ -448,6 +449,33 @@ impl StorageInterface for RedisStorage {
             }
             Err(_) => Ok(false),
         }
+    }
+
+    async fn delete_doc_stats(&mut self, doc_id: &str) -> Result<()> {
+        // 删除特定文档的 TF 统计需要从所有词项中删除该 doc_id
+        // 这是一个比较耗时的操作，需要扫描所有 TF key
+        let pattern = format!("{}:tf:*", self.key_prefix);
+        let tf_keys = self.scan_keys(&pattern).await?;
+
+        if !tf_keys.is_empty() {
+            let mut conn = self.get_connection().await?;
+            let mut pipe = redis::pipe();
+
+            // 从每个 TF Hash 中删除 doc_id field
+            for tf_key in tf_keys {
+                pipe.cmd("HDEL").arg(tf_key).arg(doc_id);
+            }
+
+            let _: () = pipe
+                .query_async(&mut *conn)
+                .await
+                .map_err(|e| {
+                    self.record_error("connection");
+                    Bm25Error::StorageError(e.to_string())
+                })?;
+        }
+
+        Ok(())
     }
 }
 
@@ -513,6 +541,68 @@ impl RedisStorage {
         let latency = start_time.elapsed().as_micros() as u64;
         self.operation_count.fetch_add(1, Ordering::Relaxed);
         self.total_latency.fetch_add(latency, Ordering::Relaxed);
+    }
+
+    /// 提交特定文档的 TF 统计（Redis 特有方法）
+    pub async fn commit_doc_tf(&mut self, term: &str, doc_id: &str, tf: f32) -> Result<()> {
+        let mut conn = self.get_connection().await?;
+
+        let _: () = redis::cmd("HINCRBYFLOAT")
+            .arg(self.make_tf_key(term))
+            .arg(doc_id)
+            .arg(tf)
+            .query_async(&mut *conn)
+            .await
+            .map_err(|e| {
+                self.record_error("connection");
+                Bm25Error::StorageError(e.to_string())
+            })?;
+
+        Ok(())
+    }
+
+    /// 批量提交多个文档的 TF 统计（Redis 特有方法）
+    pub async fn commit_batch_doc_tf(&mut self, term: &str, doc_tfs: &[(String, f32)]) -> Result<()> {
+        if doc_tfs.is_empty() {
+            return Ok(());
+        }
+
+        let mut conn = self.get_connection().await?;
+        let mut pipe = redis::pipe();
+
+        for (doc_id, tf) in doc_tfs {
+            pipe.cmd("HINCRBYFLOAT")
+                .arg(self.make_tf_key(term))
+                .arg(doc_id)
+                .arg(*tf);
+        }
+
+        let _: () = pipe
+            .query_async(&mut *conn)
+            .await
+            .map_err(|e| {
+                self.record_error("connection");
+                Bm25Error::StorageError(e.to_string())
+            })?;
+
+        Ok(())
+    }
+
+    /// 获取词项下所有文档的 TF（Redis 特有方法）
+    pub async fn get_all_doc_tf(&self, term: &str) -> Result<HashMap<String, f32>> {
+        let mut conn = self.get_connection().await?;
+
+        let tf_map: HashMap<String, f32> = redis::cmd("HGETALL")
+            .arg(self.make_tf_key(term))
+            .query_async(&mut *conn)
+            .await
+            .map_err(|e| {
+                self.record_error("connection");
+                Bm25Error::StorageError(e.to_string())
+            })
+            .unwrap_or_default();
+
+        Ok(tf_map)
     }
 }
 

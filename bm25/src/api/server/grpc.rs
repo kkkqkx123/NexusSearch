@@ -9,6 +9,7 @@ use super::proto::{
 };
 use crate::api::core::{batch, delete, document, search, stats};
 use crate::api::core::{IndexManager, IndexSchema};
+use crate::storage::{MutableStorageManager, StorageFactory};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -19,6 +20,7 @@ pub struct BM25Service {
     _config: Config,
     index_path: PathBuf,
     indexes: Arc<RwLock<HashMap<String, (IndexManager, IndexSchema)>>>,
+    storage: Option<Arc<MutableStorageManager>>,
 }
 
 impl BM25Service {
@@ -28,7 +30,27 @@ impl BM25Service {
             _config: config,
             index_path,
             indexes: Arc::new(RwLock::new(HashMap::new())),
+            storage: None,
         }
+    }
+
+    /// 创建服务并初始化存储层
+    pub async fn with_storage(config: Config) -> Result<Self, anyhow::Error> {
+        let index_path = PathBuf::from(&config.index.index_path);
+        
+        // 创建存储管理器
+        let storage = StorageFactory::create(config.storage.clone()).await?;
+        let storage_manager = Arc::new(MutableStorageManager::from_arc(storage));
+        
+        // 初始化存储
+        storage_manager.init().await?;
+        
+        Ok(Self {
+            _config: config,
+            index_path,
+            indexes: Arc::new(RwLock::new(HashMap::new())),
+            storage: Some(storage_manager),
+        })
     }
 
     async fn get_or_create_index(
@@ -67,8 +89,16 @@ impl Bm25ServiceTrait for BM25Service {
         let (manager, schema) = self.get_or_create_index(&req.index_name).await?;
         let fields: HashMap<String, String> = req.fields.into_iter().collect();
 
-        document::add_document(&manager, &schema, &req.document_id, &fields)
-            .map_err(|e| Status::internal(format!("Failed to index document: {}", e)))?;
+        // 使用存储层集成
+        if let Some(ref storage) = self.storage {
+            let avg_doc_length = self._config.bm25.avg_doc_length;
+            document::add_document_with_storage(&manager, storage, &schema, &req.document_id, &fields, avg_doc_length)
+                .await
+                .map_err(|e| Status::internal(format!("Failed to index document: {}", e)))?;
+        } else {
+            document::add_document(&manager, &schema, &req.document_id, &fields)
+                .map_err(|e| Status::internal(format!("Failed to index document: {}", e)))?;
+        }
 
         Ok(Response::new(IndexDocumentResponse {
             success: true,
@@ -97,8 +127,16 @@ impl Bm25ServiceTrait for BM25Service {
             })
             .collect();
 
-        let count = batch::batch_add_documents(&manager, &schema, documents)
-            .map_err(|e| Status::internal(format!("Failed to batch index documents: {}", e)))?;
+        // 使用存储层集成
+        let count = if let Some(ref storage) = self.storage {
+            let avg_doc_length = self._config.bm25.avg_doc_length;
+            batch::batch_add_documents_with_storage(&manager, storage, &schema, documents, avg_doc_length)
+                .await
+                .map_err(|e| Status::internal(format!("Failed to batch index documents: {}", e)))?
+        } else {
+            batch::batch_add_documents(&manager, &schema, documents)
+                .map_err(|e| Status::internal(format!("Failed to batch index documents: {}", e)))?
+        };
 
         Ok(Response::new(BatchIndexDocumentsResponse {
             success: true,
@@ -165,8 +203,15 @@ impl Bm25ServiceTrait for BM25Service {
 
         let (manager, schema) = self.get_or_create_index(&req.index_name).await?;
 
-        delete::delete_document(&manager, &schema, &req.document_id)
-            .map_err(|e| Status::internal(format!("Failed to delete document: {}", e)))?;
+        // 使用存储层集成
+        if let Some(ref storage) = self.storage {
+            delete::delete_document_with_storage(&manager, storage, &schema, &req.document_id)
+                .await
+                .map_err(|e| Status::internal(format!("Failed to delete document: {}", e)))?;
+        } else {
+            delete::delete_document(&manager, &schema, &req.document_id)
+                .map_err(|e| Status::internal(format!("Failed to delete document: {}", e)))?;
+        }
 
         Ok(Response::new(DeleteDocumentResponse {
             success: true,
@@ -273,7 +318,8 @@ pub async fn run_server(config: Config) -> anyhow::Result<()> {
     let addr = config.server.address;
     tracing::info!("BM25 service listening on {}", addr);
 
-    let bm25_service = BM25Service::new(config);
+    // 创建服务并初始化存储层
+    let bm25_service = BM25Service::with_storage(config).await?;
 
     Server::builder()
         .add_service(Bm25ServiceServer::new(bm25_service))

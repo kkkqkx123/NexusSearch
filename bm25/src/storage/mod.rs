@@ -28,6 +28,7 @@ pub mod tantivy;
 pub mod redis;
 
 pub mod factory;
+pub mod manager;
 
 pub use common::{
     r#trait::StorageInterface,
@@ -41,3 +42,4 @@ pub use tantivy::TantivyStorage;
 pub use redis::RedisStorage;
 
 pub use factory::StorageFactory;
+pub use manager::{MutableStorageManager, StorageManager};

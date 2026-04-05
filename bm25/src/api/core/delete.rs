@@ -1,5 +1,6 @@
 use crate::error::Result;
 use crate::api::core::{IndexManager, IndexSchema};
+use crate::storage::MutableStorageManager;
 use tantivy::IndexWriter;
 use tantivy::Term;
 
@@ -12,6 +13,25 @@ pub fn delete_document(
     let term = Term::from_field_text(schema.document_id, document_id);
     writer.delete_term(term);
     writer.commit()?;
+    Ok(())
+}
+
+/// 删除文档并同步到存储层
+pub async fn delete_document_with_storage(
+    manager: &IndexManager,
+    storage: &MutableStorageManager,
+    schema: &IndexSchema,
+    document_id: &str,
+) -> Result<()> {
+    // 1. 从存储层删除统计信息
+    storage.delete_doc_stats(document_id).await?;
+
+    // 2. 从索引中删除文档
+    let mut writer = manager.writer()?;
+    let term = Term::from_field_text(schema.document_id, document_id);
+    writer.delete_term(term);
+    writer.commit()?;
+
     Ok(())
 }
 

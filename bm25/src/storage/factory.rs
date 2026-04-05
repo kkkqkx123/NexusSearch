@@ -3,7 +3,7 @@
 //! Provides factory methods for creating storage instances based on configuration.
 
 use crate::config::{RedisStorageConfig, StorageConfig, StorageType, TantivyStorageConfig};
-use crate::error::{Bm25Error, Result};
+use crate::error::Result;
 use crate::storage::common::r#trait::StorageInterface;
 use std::sync::Arc;
 

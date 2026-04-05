@@ -56,6 +56,9 @@ pub trait StorageInterface: Send + Sync {
     /// 清空所有数据
     async fn clear(&mut self) -> Result<()>;
 
+    /// 删除特定文档的统计信息
+    async fn delete_doc_stats(&mut self, doc_id: &str) -> Result<()>;
+
     /// 获取存储信息
     async fn info(&self) -> Result<StorageInfo>;
 

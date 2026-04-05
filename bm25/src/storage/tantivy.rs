@@ -2,13 +2,14 @@
 //!
 //! 使用 Tantivy 作为底层存储，提供 BM25 词频统计的持久化
 
-use crate::api::core::IndexManager;
 use crate::error::{Bm25Error, Result};
 use crate::storage::common::r#trait::{Bm25Stats, StorageInterface};
 use crate::storage::common::types::StorageInfo;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
+use tantivy::schema::{Schema, TEXT, STORED, STRING};
+use tantivy::{Index, IndexReader, IndexWriter, Term};
 use tokio::sync::RwLock;
 
 /// Tantivy 存储配置
@@ -30,47 +31,64 @@ impl Default for TantivyStorageConfig {
 /// Tantivy 存储实现
 pub struct TantivyStorage {
     config: TantivyStorageConfig,
-    index_manager: Option<Arc<RwLock<IndexManager>>>,
+    index: Option<Arc<RwLock<Index>>>,
+    schema: Schema,
+    writer: Option<Arc<RwLock<IndexWriter>>>,
+    reader: Option<Arc<RwLock<IndexReader>>>,
 }
 
 impl TantivyStorage {
     pub fn new(config: TantivyStorageConfig) -> Self {
+        let schema = Self::build_schema();
         Self {
             config,
-            index_manager: None,
+            index: None,
+            schema,
+            writer: None,
+            reader: None,
         }
     }
 
-    pub fn with_index_manager(index_manager: IndexManager) -> Self {
-        Self {
-            config: TantivyStorageConfig::default(),
-            index_manager: Some(Arc::new(RwLock::new(index_manager))),
-        }
-    }
-
-    fn get_index_manager(&self) -> Result<Arc<RwLock<IndexManager>>> {
-        self.index_manager
-            .clone()
-            .ok_or_else(|| Bm25Error::IndexNotInitialized)
+    fn build_schema() -> Schema {
+        let mut schema_builder = Schema::builder();
+        schema_builder.add_text_field("document_id", STRING | STORED);
+        schema_builder.add_text_field("title", TEXT | STORED);
+        schema_builder.add_text_field("content", TEXT | STORED);
+        schema_builder.build()
     }
 }
 
 #[async_trait::async_trait]
 impl StorageInterface for TantivyStorage {
     async fn init(&mut self) -> Result<()> {
-        if self.index_manager.is_none() {
-            let index_manager = IndexManager::create(&self.config.index_path)
+        if self.index.is_none() {
+            std::fs::create_dir_all(&self.config.index_path)
+                .map_err(|e| Bm25Error::StorageError(e.to_string()))?;
+            
+            let index = Index::create_in_dir(&self.config.index_path, self.schema.clone())
                 .map_err(|e| Bm25Error::IndexCreationFailed(e.to_string()))?;
-            self.index_manager = Some(Arc::new(RwLock::new(index_manager)));
+            
+            let writer = index
+                .writer(self.config.writer_memory_mb * 1024 * 1024)
+                .map_err(|e| Bm25Error::IndexCreationFailed(e.to_string()))?;
+            
+            let reader = index
+                .reader_builder()
+                .reload_policy(tantivy::ReloadPolicy::OnCommitWithDelay)
+                .try_into()
+                .map_err(|e| Bm25Error::IndexCreationFailed(e.to_string()))?;
+            
+            self.index = Some(Arc::new(RwLock::new(index)));
+            self.writer = Some(Arc::new(RwLock::new(writer)));
+            self.reader = Some(Arc::new(RwLock::new(reader)));
         }
         Ok(())
     }
 
     async fn close(&mut self) -> Result<()> {
-        if let Some(manager) = self.index_manager.take() {
-            let manager = manager.write().await;
-            let mut index_writer = manager.writer()?;
-            index_writer
+        if let Some(writer) = self.writer.take() {
+            let mut writer = writer.write().await;
+            writer
                 .commit()
                 .map_err(|e: tantivy::TantivyError| Bm25Error::IndexCommitFailed(e.to_string()))?;
         }
@@ -88,14 +106,14 @@ impl StorageInterface for TantivyStorage {
     }
 
     async fn get_stats(&self, term: &str) -> Result<Option<Bm25Stats>> {
-        let manager = self.get_index_manager()?;
-        let manager = manager.read().await;
-        let reader = manager.reader()?;
+        let reader = self.reader.as_ref()
+            .ok_or_else(|| Bm25Error::IndexNotInitialized)?;
+        let reader = reader.read().await;
         let searcher = reader.searcher();
         
-        // Get term from the content field
-        let field = manager.schema().get_field("content").unwrap();
-        let term_obj = tantivy::Term::from_field_text(field, term);
+        // Get term frequency from the content field
+        let field = self.schema.get_field("content").unwrap();
+        let term_obj = Term::from_field_text(field, term);
         
         // Get document frequency
         let doc_freq = searcher.doc_freq(&term_obj)?;
@@ -118,13 +136,13 @@ impl StorageInterface for TantivyStorage {
     }
 
     async fn get_df(&self, term: &str) -> Result<Option<u64>> {
-        let manager = self.get_index_manager()?;
-        let manager = manager.read().await;
-        let reader = manager.reader()?;
+        let reader = self.reader.as_ref()
+            .ok_or_else(|| Bm25Error::IndexNotInitialized)?;
+        let reader = reader.read().await;
         let searcher = reader.searcher();
         
-        let field = manager.schema().get_field("content").unwrap();
-        let term_obj = tantivy::Term::from_field_text(field, term);
+        let field = self.schema.get_field("content").unwrap();
+        let term_obj = Term::from_field_text(field, term);
         
         let doc_freq = searcher.doc_freq(&term_obj)?;
         Ok(Some(doc_freq as u64))
@@ -133,13 +151,13 @@ impl StorageInterface for TantivyStorage {
     async fn get_tf(&self, term: &str, _doc_id: &str) -> Result<Option<f32>> {
         // TF is calculated during search time in Tantivy
         // This is a simplified implementation
-        let manager = self.get_index_manager()?;
-        let manager = manager.read().await;
-        let reader = manager.reader()?;
+        let reader = self.reader.as_ref()
+            .ok_or_else(|| Bm25Error::IndexNotInitialized)?;
+        let reader = reader.read().await;
         let searcher = reader.searcher();
         
-        let field = manager.schema().get_field("content").unwrap();
-        let term_obj = tantivy::Term::from_field_text(field, term);
+        let field = self.schema.get_field("content").unwrap();
+        let term_obj = Term::from_field_text(field, term);
         
         let doc_freq = searcher.doc_freq(&term_obj)?;
         let total_docs = searcher.num_docs();
@@ -154,28 +172,40 @@ impl StorageInterface for TantivyStorage {
     }
 
     async fn clear(&mut self) -> Result<()> {
-        if let Some(manager) = &self.index_manager {
-            let manager = manager.write().await;
-            let mut index_writer = manager.writer()?;
-            index_writer
+        if let Some(writer) = self.writer.as_ref() {
+            let mut writer = writer.write().await;
+            writer
                 .commit()
                 .map_err(|e: tantivy::TantivyError| Bm25Error::IndexCommitFailed(e.to_string()))?;
         }
         Ok(())
     }
 
+    async fn delete_doc_stats(&mut self, _doc_id: &str) -> Result<()> {
+        // Tantivy 中统计信息是动态计算的，不需要显式删除
+        // 文档删除由 IndexManager 处理
+        Ok(())
+    }
+
     async fn info(&self) -> Result<StorageInfo> {
+        let total_docs = if let Some(reader) = &self.reader {
+            let reader = reader.read().await;
+            reader.searcher().num_docs() as usize
+        } else {
+            0
+        };
+
         Ok(StorageInfo {
             name: "TantivyStorage".to_string(),
             version: env!("CARGO_PKG_VERSION").to_string(),
             size: 0,
-            document_count: 0,
+            document_count: total_docs,
             term_count: 0,
             is_connected: true,
         })
     }
 
     async fn health_check(&self) -> Result<bool> {
-        Ok(self.index_manager.is_some())
+        Ok(self.index.is_some())
     }
 }

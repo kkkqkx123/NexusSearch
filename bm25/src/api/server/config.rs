@@ -83,6 +83,7 @@ impl Config {
             server: ServerConfig {
                 address: server_address.parse()?,
             },
+            storage: StorageConfig::default(),
             index: IndexConfig {
                 data_dir,
                 index_path,

@@ -56,3 +56,6 @@ pub use storage::RedisStorage;
 
 #[cfg(any(feature = "storage-tantivy", feature = "storage-redis"))]
 pub use storage::StorageFactory;
+
+#[cfg(any(feature = "storage-tantivy", feature = "storage-redis"))]
+pub use storage::{StorageManager, MutableStorageManager};
