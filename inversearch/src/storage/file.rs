@@ -229,7 +229,7 @@ mod tests {
         storage.close().await.unwrap();
 
         // 重新打开并验证数据还在
-        let mut storage2 = FileStorage::new(dir_path.to_str().unwrap().to_string());
+        let storage2 = FileStorage::new(dir_path.to_str().unwrap().to_string());
         storage2.open().await.unwrap();
 
         let results2 = storage2

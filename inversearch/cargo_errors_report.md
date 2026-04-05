@@ -3,11 +3,11 @@
 ## Summary
 
 - **Total Errors**: 0
-- **Total Warnings**: 4
-- **Total Issues**: 4
+- **Total Warnings**: 10
+- **Total Issues**: 10
 - **Unique Error Patterns**: 0
-- **Unique Warning Patterns**: 4
-- **Files with Issues**: 1
+- **Unique Warning Patterns**: 1
+- **Files with Issues**: 2
 
 ## Error Statistics
 
@@ -15,27 +15,32 @@
 
 ## Warning Statistics
 
-**Total Warnings**: 4
+**Total Warnings**: 10
 
 ### Warning Type Breakdown
 
-- **warning**: 4 warnings
+- **warning**: 10 warnings
 
 ### Files with Warnings (Top 10)
 
-- `src\storage\cold_warm_cache\manager.rs`: 4 warnings
+- `tests\storage_test.rs`: 9 warnings
+- `src\storage\file.rs`: 1 warnings
 
 ## Detailed Warning Categorization
 
-### warning: this `impl` can be derived
+### warning: variable does not need to be mutable
 
-**Total Occurrences**: 4  
-**Unique Files**: 1
+**Total Occurrences**: 10  
+**Unique Files**: 2
 
-#### `src\storage\cold_warm_cache\manager.rs`: 4 occurrences
+#### `tests\storage_test.rs`: 9 occurrences
 
-- Line 58: this `impl` can be derived
-- Line 242: this `map_or` can be simplified
-- Line 344: writing `&PathBuf` instead of `&Path` involves a new object where a slice will do: help: change this to: `&Path`
-- ... 1 more occurrences in this file
+- Line 193: variable does not need to be mutable
+- Line 219: variable does not need to be mutable
+- Line 239: variable does not need to be mutable
+- ... 6 more occurrences in this file
+
+#### `src\storage\file.rs`: 1 occurrences
+
+- Line 232: variable does not need to be mutable
 

@@ -190,11 +190,11 @@ mod memory_tests {
     /// 测试内存存储基本操作
     #[tokio::test]
     async fn test_memory_storage_basic() {
-        let mut storage = MemoryStorage::new();
+        let storage = MemoryStorage::new();
 
         storage.open().await.expect("open should succeed");
 
-        let mut index = Index::new(IndexOptions::default()).expect("create index should succeed");
+        let index = Index::new(IndexOptions::default()).expect("create index should succeed");
         index.add(1, "hello world", false).expect("add should succeed");
         index.add(2, "rust programming", false).expect("add should succeed");
 
@@ -216,11 +216,11 @@ mod memory_tests {
     /// 测试内存存储清空
     #[tokio::test]
     async fn test_memory_storage_clear() {
-        let mut storage = MemoryStorage::new();
+        let storage = MemoryStorage::new();
 
         storage.open().await.expect("open should succeed");
 
-        let mut index = Index::new(IndexOptions::default()).expect("create index should succeed");
+        let index = Index::new(IndexOptions::default()).expect("create index should succeed");
         index.add(1, "test content", false).expect("add should succeed");
         storage.commit(&index, false, false).await.expect("commit should succeed");
 
@@ -236,11 +236,11 @@ mod memory_tests {
     /// 测试内存存储删除
     #[tokio::test]
     async fn test_memory_storage_remove() {
-        let mut storage = MemoryStorage::new();
+        let storage = MemoryStorage::new();
 
         storage.open().await.expect("open should succeed");
 
-        let mut index = Index::new(IndexOptions::default()).expect("create index should succeed");
+        let index = Index::new(IndexOptions::default()).expect("create index should succeed");
         index.add(1, "doc1", false).expect("add should succeed");
         index.add(2, "doc2", false).expect("add should succeed");
         storage.commit(&index, false, false).await.expect("commit should succeed");
@@ -257,11 +257,11 @@ mod memory_tests {
     /// 测试内存存储富化
     #[tokio::test]
     async fn test_memory_storage_enrich() {
-        let mut storage = MemoryStorage::new();
+        let storage = MemoryStorage::new();
 
         storage.open().await.expect("open should succeed");
 
-        let mut index = Index::new(IndexOptions::default()).expect("create index should succeed");
+        let index = Index::new(IndexOptions::default()).expect("create index should succeed");
         index.add(1, "content one", false).expect("add should succeed");
         index.add(2, "content two", false).expect("add should succeed");
         storage.commit(&index, false, false).await.expect("commit should succeed");
@@ -275,11 +275,11 @@ mod memory_tests {
     /// 测试内存存储指标
     #[tokio::test]
     async fn test_memory_storage_metrics() {
-        let mut storage = MemoryStorage::new();
+        let storage = MemoryStorage::new();
 
         storage.open().await.expect("open should succeed");
 
-        let mut index = Index::new(IndexOptions::default()).expect("create index should succeed");
+        let index = Index::new(IndexOptions::default()).expect("create index should succeed");
         index.add(1, "test content for metrics", false).expect("add should succeed");
         storage.commit(&index, false, false).await.expect("commit should succeed");
 
@@ -304,11 +304,11 @@ mod file_tests {
     #[tokio::test]
     async fn test_file_storage_basic() {
         let temp_dir = TempDir::new().expect("create temp dir should succeed");
-        let mut storage = FileStorage::new(temp_dir.path());
+        let storage = FileStorage::new(temp_dir.path());
 
         storage.open().await.expect("open should succeed");
 
-        let mut index = Index::new(IndexOptions::default()).expect("create index should succeed");
+        let index = Index::new(IndexOptions::default()).expect("create index should succeed");
         index.add(1, "hello world", false).expect("add should succeed");
         index.add(2, "rust programming", false).expect("add should succeed");
 
@@ -335,10 +335,10 @@ mod file_tests {
 
         // 第一次创建并写入数据
         {
-            let mut storage = FileStorage::new(&path);
+            let storage = FileStorage::new(&path);
             storage.open().await.expect("open should succeed");
 
-            let mut index = Index::new(IndexOptions::default()).expect("create index should succeed");
+            let index = Index::new(IndexOptions::default()).expect("create index should succeed");
             index.add(1, "persistent data", false).expect("add should succeed");
             storage.commit(&index, false, false).await.expect("commit should succeed");
 
@@ -362,11 +362,11 @@ mod file_tests {
     #[tokio::test]
     async fn test_file_storage_size() {
         let temp_dir = TempDir::new().expect("create temp dir should succeed");
-        let mut storage = FileStorage::new(temp_dir.path());
+        let storage = FileStorage::new(temp_dir.path());
 
         storage.open().await.expect("open should succeed");
 
-        let mut index = Index::new(IndexOptions::default()).expect("create index should succeed");
+        let index = Index::new(IndexOptions::default()).expect("create index should succeed");
         index.add(1, "test content", false).expect("add should succeed");
         storage.commit(&index, false, false).await.expect("commit should succeed");
 
