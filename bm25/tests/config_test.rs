@@ -2,8 +2,9 @@
 //!
 //! 测试配置加载、验证和构建功能
 
-use bm25_service::config::{Bm25Config, IndexManagerConfig};
+use bm25_service::config::{Bm25Config, IndexManagerConfig, StorageConfig, StorageType};
 use bm25_service::api::core::{MergePolicyType, IndexManager};
+use bm25_service::api::server::config::Config;
 use tempfile::TempDir;
 
 /// 测试 Bm25Config 默认值
@@ -332,4 +333,92 @@ fn test_full_config_workflow() {
         .expect("Failed to create index manager");
 
     assert!(index_path.exists());
+}
+
+/// 测试 StorageConfig 嵌套 TOML 解析
+///
+/// 验证嵌套的 TOML 结构能正确解析到 StorageConfig
+#[test]
+fn test_storage_config_nested_toml() {
+    let toml_content = r#"
+        storage_type = "tantivy"
+        
+        [tantivy]
+        index_path = "./index"
+        writer_memory_mb = 50
+        
+        [redis]
+        url = "redis://localhost:6379"
+        pool_size = 10
+        connection_timeout_secs = 30
+        key_prefix = "bm25"
+    "#;
+    
+    let config: StorageConfig = toml::from_str(toml_content).unwrap();
+    
+    assert_eq!(config.storage_type, StorageType::Tantivy);
+    assert_eq!(config.tantivy.index_path, "./index");
+    assert_eq!(config.tantivy.writer_memory_mb, 50);
+    assert_eq!(config.redis.url, "redis://localhost:6379");
+    assert_eq!(config.redis.pool_size, 10);
+}
+
+/// 测试完整 Config 嵌套 TOML 解析
+///
+/// 验证完整配置文件的嵌套 TOML 结构能正确解析
+#[test]
+fn test_full_config_nested_toml() {
+    let toml_content = r#"
+        [server]
+        address = "0.0.0.0:50051"
+        
+        [storage]
+        storage_type = "tantivy"
+        
+        [storage.tantivy]
+        index_path = "./index"
+        writer_memory_mb = 50
+        
+        [storage.redis]
+        url = "redis://localhost:6379"
+        pool_size = 10
+        connection_timeout_secs = 30
+        key_prefix = "bm25"
+        
+        [index]
+        data_dir = "./data"
+        index_path = "./index"
+        
+        [index.manager]
+        writer_memory_budget = 50000000
+        writer_num_threads = 0
+        reader_cache_enabled = true
+        
+        [bm25]
+        k1 = 1.2
+        b = 0.75
+        avg_doc_length = 100.0
+        
+        [bm25.field_weights]
+        title = 2.0
+        content = 1.0
+        
+        [search]
+        default_limit = 10
+        max_limit = 100
+        enable_highlight = true
+        highlight_fragment_size = 200
+        enable_spell_check = false
+        fuzzy_matching = false
+        fuzzy_distance = 2
+    "#;
+    
+    let config: Config = toml::from_str(toml_content).unwrap();
+    
+    assert_eq!(config.server.address.to_string(), "0.0.0.0:50051");
+    assert_eq!(config.storage.storage_type, StorageType::Tantivy);
+    assert_eq!(config.storage.tantivy.index_path, "./index");
+    assert_eq!(config.index.data_dir, "./data");
+    assert_eq!(config.bm25.k1, 1.2);
+    assert_eq!(config.search.default_limit, 10);
 }
