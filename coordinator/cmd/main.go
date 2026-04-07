@@ -12,6 +12,7 @@ import (
 	"github.com/flexsearch/coordinator/internal/cache"
 	"github.com/flexsearch/coordinator/internal/config"
 	"github.com/flexsearch/coordinator/internal/engine"
+	"github.com/flexsearch/coordinator/internal/engine/vector"
 	"github.com/flexsearch/coordinator/internal/merger"
 	"github.com/flexsearch/coordinator/internal/router"
 	coordinatorServer "github.com/flexsearch/coordinator/internal/server"
@@ -152,44 +153,39 @@ func initializeEngines(cfg *config.Config, logger *util.Logger) map[string]engin
 	}
 
 	if cfg.Engines.Vector.Enabled {
-		vectorClient, err := engine.NewVectorClient(&engine.ClientConfig{
+		threshold := cfg.Engines.Vector.Threshold
+		if threshold <= 0 {
+			threshold = 0.7
+		}
+		topK := cfg.Engines.Vector.TopK
+		if topK <= 0 {
+			topK = 10
+		}
+
+		vectorClient, err := vector.NewVectorClient(&vector.ClientConfig{
 			Host:       cfg.Engines.Vector.Host,
 			Port:       cfg.Engines.Vector.Port,
 			Timeout:    cfg.Engines.Vector.Timeout,
 			MaxRetries: cfg.Engines.Vector.MaxRetries,
 			PoolSize:   cfg.Engines.Vector.PoolSize,
-		}, &engine.VectorEngineConfig{
-			Model:     cfg.Engines.Vector.Model,
-			Dimension: cfg.Engines.Vector.Dimension,
-			Threshold: 0.7,
-			TopK:      10,
-			Hybrid:    false,
-			Alpha:     0.5,
+		}, &vector.VectorEngineConfig{
+			Model:               cfg.Engines.Vector.Model,
+			Dimension:           cfg.Engines.Vector.Dimension,
+			Threshold:           threshold,
+			TopK:                topK,
+			Collection:          cfg.Engines.Vector.Collection,
+			EmbeddingServiceURL: cfg.Engines.Vector.EmbeddingServiceURL,
+			Hybrid:              false,
+			Alpha:               0.5,
 		}, logger)
 		if err != nil {
 			logger.Errorf("Failed to create Vector client: %v", err)
 		} else {
-			if cfg.Engines.Vector.QdrantURL != "" {
-				qdrantClient, err := engine.NewQdrantClient(&config.VectorEngineConfig{
-					Enabled:    true,
-					QdrantURL:  cfg.Engines.Vector.QdrantURL,
-					GRPCURL:    cfg.Engines.Vector.GRPCURL,
-					Collections: cfg.Engines.Vector.Collections,
-					Timeout:    cfg.Engines.Vector.Timeout,
-					MaxRetries: cfg.Engines.Vector.MaxRetries,
-					CacheTTL:   cfg.Engines.Vector.CacheTTL,
-				}, logger)
-				if err != nil {
-					logger.Warnf("Failed to initialize Qdrant client: %v", err)
-				} else {
-					logger.Info("Qdrant client initialized successfully")
-					defer qdrantClient.Close()
-				}
-			}
 			if err := vectorClient.Connect(context.Background()); err != nil {
-				logger.Warnf("Failed to connect to Vector: %v", err)
+				logger.Warnf("Failed to connect to Qdrant: %v", err)
 			} else {
 				engines["vector"] = vectorClient
+				logger.Info("Vector client connected to Qdrant successfully")
 			}
 		}
 	}

@@ -39,12 +39,16 @@ engines:
   vector:
     enabled: true
     host: "localhost"
-    port: 50055
-    timeout: 10s
+    port: 6334
+    timeout: 30s
     max_retries: 3
     pool_size: 10
     model: "all-MiniLM-L6-v2"
     dimension: 384
+    threshold: 0.7
+    top_k: 10
+    collection: "default"
+    embedding_service_url: "http://localhost:8080"
     qdrant_url: "http://localhost:6333"
     grpc_url: "localhost:6334"
     cache_ttl: 300

@@ -32,18 +32,22 @@ type BM25Config struct {
 }
 
 type VectorConfig struct {
-	Enabled    bool                    `mapstructure:"enabled"`
-	Host       string                  `mapstructure:"host"`
-	Port       int                     `mapstructure:"port"`
-	Timeout    time.Duration           `mapstructure:"timeout"`
-	MaxRetries int                     `mapstructure:"max_retries"`
-	PoolSize   int                     `mapstructure:"pool_size"`
-	Model      string                  `mapstructure:"model"`
-	Dimension  int                     `mapstructure:"dimension"`
-	QdrantURL  string                  `mapstructure:"qdrant_url"`
-	GRPCURL    string                  `mapstructure:"grpc_url"`
-	Collections map[string]CollectionConfig `mapstructure:"collections"`
-	CacheTTL   int                     `mapstructure:"cache_ttl"`
+	Enabled             bool                       `mapstructure:"enabled"`
+	Host                string                     `mapstructure:"host"`
+	Port                int                        `mapstructure:"port"`
+	Timeout             time.Duration              `mapstructure:"timeout"`
+	MaxRetries          int                        `mapstructure:"max_retries"`
+	PoolSize            int                        `mapstructure:"pool_size"`
+	Model               string                     `mapstructure:"model"`
+	Dimension           int                        `mapstructure:"dimension"`
+	Threshold           float64                    `mapstructure:"threshold"`
+	TopK                int                        `mapstructure:"top_k"`
+	Collection          string                     `mapstructure:"collection"`
+	EmbeddingServiceURL string                     `mapstructure:"embedding_service_url"`
+	QdrantURL           string                     `mapstructure:"qdrant_url"`
+	GRPCURL             string                     `mapstructure:"grpc_url"`
+	Collections         map[string]CollectionConfig `mapstructure:"collections"`
+	CacheTTL            int                        `mapstructure:"cache_ttl"`
 }
 
 type CollectionConfig struct {
